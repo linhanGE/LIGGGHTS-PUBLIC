@@ -5,3 +5,4 @@
 *.suo
 *.vcxproj
 *.filters
+/lib/vtk
