@@ -86,7 +86,7 @@ namespace ContactModels {
 	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), lowcut(0.), highcut(0.)
+	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), lowcut(0.)
 	{
 		
 	}
