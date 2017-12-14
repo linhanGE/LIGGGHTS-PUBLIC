@@ -995,11 +995,12 @@ void FixWallGran::post_force_mesh(int vflag)
                     v_wall[i] = (bary[0]*vMesh[iTri][0][i] + bary[1]*vMesh[iTri][1][i] + bary[2]*vMesh[iTri][2][i]);
               }
 
-              if(!sidata.is_non_spherical || atom->superquadric_flag)
+              if(!sidata.is_non_spherical || atom->superquadric_flag) {
                   if (deltan > 0) {
 					  sidata.nonConDeltan = deltan;
 					  sidata.deltan = 0;
 				  } else sidata.deltan   = -deltan;
+			  }
               sidata.delta[0] = -delta[0];
               sidata.delta[1] = -delta[1];
               sidata.delta[2] = -delta[2];
@@ -1131,9 +1132,11 @@ void FixWallGran::post_force_primitive(int vflag)
       }
 
       if(!sidata.is_non_spherical || atom->superquadric_flag) {
-		  sidata.nonConDeltan = deltan;
-		  sidata.deltan   = 0;
-	  } else sidata.deltan = -deltan;
+		  if (deltan > 0) {
+			  sidata.nonConDeltan = deltan;
+			  sidata.deltan   = 0;
+		  } else sidata.deltan = -deltan;
+	  } 
       sidata.delta[0] = -delta[0];
       sidata.delta[1] = -delta[1];
       sidata.delta[2] = -delta[2];
