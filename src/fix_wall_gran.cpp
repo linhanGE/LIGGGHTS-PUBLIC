@@ -996,12 +996,7 @@ void FixWallGran::post_force_mesh(int vflag)
               }
 
               if(!sidata.is_non_spherical || atom->superquadric_flag)
-                if (deltan > 0) {
-					sidata.nonConDeltan = deltan;
-					sidata.deltan = 0;
-					intersectflag = false;
-				}
-                else sidata.deltan = -deltan;
+                sidata.deltan = -deltan;
               sidata.delta[0] = -delta[0];
               sidata.delta[1] = -delta[1];
               sidata.delta[2] = -delta[2];
@@ -1012,7 +1007,18 @@ void FixWallGran::post_force_mesh(int vflag)
                 sidata.r =  r0_ - sidata.deltan;
                 compute_force(sidata, v_wall); // LEGACY CODE (SPH)
 			  } 
-			} 
+			} else if (deltan > 0) {
+				if(!sidata.is_non_spherical || atom->superquadric_flag) {
+					sidata.nonConDeltan = deltan;
+					sidata.deltan = 0;
+				}
+              intersectflag = false;
+			  sidata.delta[0] = -delta[0];
+              sidata.delta[1] = -delta[1];
+              sidata.delta[2] = -delta[2];
+              if(impl)
+                impl->compute_force(this, sidata, intersectflag,v_wall,FixMesh_list_[iMesh],iMesh,mesh,iTri);
+			}
           }
       }
 
@@ -1068,6 +1074,8 @@ void FixWallGran::post_force_primitive(int vflag)
 
     if(deltan>cutneighmax_) continue;
 
+	sidata.i = iPart;
+
     if(deltan <= 0 || deltan < contactDistanceMultiplier*radius[iPart])
     {
       // spheres
@@ -1121,7 +1129,6 @@ void FixWallGran::post_force_primitive(int vflag)
           vectorCross3D(shearAxisVec_,rdist,v_wall);
           
       }
-      sidata.i = iPart;
       sidata.contact_history = c_history ? c_history[iPart] : NULL;
 
       if(    (atom->superquadric_flag && deltan > 0.0)
@@ -1133,12 +1140,7 @@ void FixWallGran::post_force_primitive(int vflag)
       }
 
       if(!sidata.is_non_spherical || atom->superquadric_flag)
-		if (deltan > 0) {
-			sidata.nonConDeltan = deltan;
-			sidata.deltan = 0;
-			intersectflag = false;
-		}
-        else sidata.deltan = -deltan;
+		sidata.deltan = -deltan;
       sidata.delta[0] = -delta[0];
       sidata.delta[1] = -delta[1];
       sidata.delta[2] = -delta[2];
@@ -1150,8 +1152,18 @@ void FixWallGran::post_force_primitive(int vflag)
         sidata.r =  r0_ - sidata.deltan;
         compute_force(sidata, v_wall); // LEGACY CODE (SPH)
       }
-    }
-    
+	} else if (deltan > 0){
+			if(!sidata.is_non_spherical || atom->superquadric_flag) {
+				sidata.nonConDeltan = deltan;	
+				sidata.deltan = 0;
+			}
+			bool intersectflag = false;
+			sidata.delta[0] = -delta[0];
+			sidata.delta[1] = -delta[1];
+			sidata.delta[2] = -delta[2];
+			if(impl)
+				impl->compute_force(this, sidata, intersectflag, v_wall);
+	}
     else
     {
       if(c_history)

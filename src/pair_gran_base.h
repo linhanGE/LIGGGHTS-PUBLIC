@@ -221,7 +221,7 @@ public:
     const bool store_contact_forces_stress = pg->storeContactForcesStress();
     const int freeze_group_bit = pg->freeze_group_bit();
 
-    const double contactDistanceMultiplier = (neighbor->contactDistanceFactor-1)*(neighbor->contactDistanceFactor-1);
+    const double contactDistanceMultiplier = neighbor->contactDistanceFactor*neighbor->contactDistanceFactor;
 
     // fix insert/stream/predefined
     // check if inserted
@@ -412,6 +412,10 @@ public:
 
         // surfacesClose is not supported for convex particles
         } else if(rsq < contactDistanceMultiplier * radsum * radsum && !atom->shapetype_flag) {
+          // apply force update only if selected contact models have requested it
+          sidata.has_force_update = false;
+          cmodel.surfacesClose(sidata, i_forces, j_forces);
+        } else if(rsq > radsum * radsum && !atom->shapetype_flag) {
           // apply force update only if selected contact models have requested it
           sidata.has_force_update = false;
           cmodel.surfacesClose(sidata, i_forces, j_forces);

@@ -68,11 +68,11 @@ namespace MODEL_PARAMS
 	  return lowCutScalar;
 	}
 
-	/*inline static ScalarProperty* createHighCut(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createHighCut(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* highCutScalar = MODEL_PARAMS::createScalarProperty(registry, "highcut", caller);
 	  return highCutScalar;
-	}*/
+	}
 }
 
 namespace LIGGGHTS {
@@ -102,10 +102,10 @@ namespace ContactModels {
 	{
 		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosity);
 		registry.registerProperty("lowcut", &MODEL_PARAMS::createLowCut);
-		//registry.registerProperty("highcut", &MODEL_PARAMS::createLowCut);
+		registry.registerProperty("highcut", &MODEL_PARAMS::createHighCut);
 		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
 		registry.connect("lowcut", lowcut,"cohesion_model lubrication");
-		//registry.connect("highcut", highcut,"cohesion_model lubrication");
+		registry.connect("highcut", highcut,"cohesion_model lubrication");
 
 		// error checks on coarsegraining
 		if(force->cg_active())
@@ -154,7 +154,8 @@ namespace ContactModels {
 		  const double vr2 = v[i][1] - v[j][1];
 		  const double vr3 = v[i][2] - v[j][2];
 		  const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		  			  
+		  
+		  if (d < highcut) {
 		  const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			  
 		  const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
@@ -168,6 +169,7 @@ namespace ContactModels {
 		  j_forces.delta_F[0] -= fx;
 		  j_forces.delta_F[1] -= fy;
 		  j_forces.delta_F[2] -= fz;
+		  }
 	  }
 
 	  if(scdata.is_wall) {
@@ -185,21 +187,23 @@ namespace ContactModels {
 		const double vr3 = scdata.v_i[2]  - scdata.v_j[2];
 
 		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-				
+		
+		if (d < highcut) {
 		const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			
 		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
 		const double fy = F_lubrication * eny;				 
 		const double fz = F_lubrication * enz;				 
-		
+			
 		i_forces.delta_F[0] += fx;
 		i_forces.delta_F[1] += fy;
 		i_forces.delta_F[2] += fz;
+		}
 	  }
 	}
   
   private:
-	double fluidViscosity,lowcut;
+	double fluidViscosity,lowcut,highcut;
 	int history_offset;
 	bool tangentialReduce_;
   };
