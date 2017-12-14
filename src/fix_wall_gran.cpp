@@ -1010,7 +1010,7 @@ void FixWallGran::post_force_mesh(int vflag)
 			} else if (deltan > 0) {
 				if(!sidata.is_non_spherical || atom->superquadric_flag) {
 					sidata.nonConDeltan = deltan;
-					sidata.deltan = 0;
+					sidata.deltan = deltan;
 				}
               intersectflag = false;
 			  sidata.delta[0] = -delta[0];
@@ -1155,7 +1155,7 @@ void FixWallGran::post_force_primitive(int vflag)
 	} else if (deltan > 0){
 			if(!sidata.is_non_spherical || atom->superquadric_flag) {
 				sidata.nonConDeltan = deltan;	
-				sidata.deltan = 0;
+				sidata.deltan = deltan;
 			}
 			bool intersectflag = false;
 			sidata.delta[0] = -delta[0];
@@ -1163,8 +1163,7 @@ void FixWallGran::post_force_primitive(int vflag)
 			sidata.delta[2] = -delta[2];
 			if(impl)
 				impl->compute_force(this, sidata, intersectflag, v_wall);
-	}
-    else
+	} else
     {
       if(c_history)
       {

@@ -155,7 +155,7 @@ namespace ContactModels {
 		  const double vr3 = v[i][2] - v[j][2];
 		  const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 		  
-		  if (d < highcut) {
+		  if (d <= highcut) {
 		  const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			  
 		  const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
@@ -188,7 +188,7 @@ namespace ContactModels {
 
 		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 		
-		if (d < highcut) {
+		if (d <= highcut) {
 		const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			
 		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
