@@ -1008,9 +1008,14 @@ void FixWallGran::post_force_mesh(int vflag)
                 compute_force(sidata, v_wall); // LEGACY CODE (SPH)
 			  } 
 			} else if (deltan > 0) {
+				if(vMeshC && !atom->shapetype_flag)
+              {
+                for(int i = 0; i < 3; i++)
+                    v_wall[i] = (bary[0]*vMesh[iTri][0][i] + bary[1]*vMesh[iTri][1][i] + bary[2]*vMesh[iTri][2][i]);
+              }
 				if(!sidata.is_non_spherical || atom->superquadric_flag) {
 					sidata.nonConDeltan = deltan;
-					sidata.deltan = deltan;
+					sidata.deltan = 0;
 				}
               intersectflag = false;
 			  sidata.delta[0] = -delta[0];
@@ -1152,9 +1157,14 @@ void FixWallGran::post_force_primitive(int vflag)
         compute_force(sidata, v_wall); // LEGACY CODE (SPH)
       }
 	} else if (deltan > 0) {
+			if(shear_ && shearAxis_ >= 0) {
+				primitiveWall_->calcRadialDistance(x_[iPart],rdist);
+				vectorCross3D(shearAxisVec_,rdist,v_wall);
+            }
+			sidata.contact_history = c_history ? c_history[iPart] : NULL;
 			if(!sidata.is_non_spherical || atom->superquadric_flag) {
 				sidata.nonConDeltan = deltan;	
-				sidata.deltan = deltan;
+				sidata.deltan = 0;
 			}
 			bool intersectflag = false;
 			sidata.delta[0] = -delta[0];
