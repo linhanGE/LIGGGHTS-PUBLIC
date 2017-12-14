@@ -415,10 +415,6 @@ public:
           // apply force update only if selected contact models have requested it
           sidata.has_force_update = false;
           cmodel.surfacesClose(sidata, i_forces, j_forces);
-        } else if(rsq >= radsum * radsum && !atom->shapetype_flag) {
-          // apply force update only if selected contact models have requested it
-          sidata.has_force_update = false;
-          cmodel.surfacesClose(sidata, i_forces, j_forces);
         } else
           sidata.has_force_update = false;
 

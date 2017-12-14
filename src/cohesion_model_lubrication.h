@@ -62,16 +62,16 @@ namespace MODEL_PARAMS
 	  return fluidViscosityScalar;
 	}
 	
-	inline static ScalarProperty* createLowCut(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createMinSeparationDist(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
-	  ScalarProperty* lowCutScalar = MODEL_PARAMS::createScalarProperty(registry, "lowcut", caller);
-	  return lowCutScalar;
+	  ScalarProperty* minSeparationDistScalar = MODEL_PARAMS::createScalarProperty(registry, "minSeparationDist", caller);
+	  return minSeparationDistScalar;
 	}
 
-	inline static ScalarProperty* createHighCut(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createMaxSeparationDistRatio(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
-	  ScalarProperty* highCutScalar = MODEL_PARAMS::createScalarProperty(registry, "highcut", caller);
-	  return highCutScalar;
+	  ScalarProperty* maxSeparationDistRatioScalar = MODEL_PARAMS::createScalarProperty(registry, "maxSeparationDistRatio", caller);
+	  return maxSeparationDistRatioScalar;
 	}
 }
 
@@ -86,7 +86,7 @@ namespace ContactModels {
 	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), lowcut(0.)
+	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), minSeparationDist(0.),maxSeparationDistRatio(0.)
 	{
 		
 	}
@@ -101,15 +101,19 @@ namespace ContactModels {
 	void connectToProperties(PropertyRegistry & registry)
 	{
 		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosity);
-		registry.registerProperty("lowcut", &MODEL_PARAMS::createLowCut);
-		registry.registerProperty("highcut", &MODEL_PARAMS::createHighCut);
+		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDist);
+		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatio);
 		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
-		registry.connect("lowcut", lowcut,"cohesion_model lubrication");
-		registry.connect("highcut", highcut,"cohesion_model lubrication");
+		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model lubrication");
+		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model lubrication");
 
 		// error checks on coarsegraining
 		if(force->cg_active())
 			error->cg(FLERR,"cohesion model lubrication");
+
+		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
+		if(maxSeparationDistRatio < 1.0)
+            error->one(FLERR,"\n\ncohesion model easo/capillary/viscous requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
 	}
 
 	inline void endSurfacesIntersect(SurfacesIntersectData &sidata, ForceData&, ForceData&) {}
@@ -141,7 +145,7 @@ namespace ContactModels {
 		  const double radj = scdata.radj;
 		  const double rEff = radi*radj / radsum;
 		  double d = r - radsum;
-		  d = d > lowcut ? d : lowcut;
+		  d = d > minSeparationDist ? d : minSeparationDist;
 			  
 		  const double dx = scdata.delta[0];
 		  const double dy = scdata.delta[1];
@@ -155,7 +159,6 @@ namespace ContactModels {
 		  const double vr3 = v[i][2] - v[j][2];
 		  const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 		  
-		  if (d <= highcut) {
 		  const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			  
 		  const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
@@ -169,13 +172,12 @@ namespace ContactModels {
 		  j_forces.delta_F[0] -= fx;
 		  j_forces.delta_F[1] -= fy;
 		  j_forces.delta_F[2] -= fz;
-		  }
 	  }
 
 	  if(scdata.is_wall) {
 		
 		double d = scdata.nonConDeltan;                             // deltan is the distance to the wall if scdata.wall = true
-		d = d > lowcut ? d : lowcut;
+		d = d > minSeparationDist ? d : minSeparationDist;
 		const double rinv =  1.0/scdata.nonConr;
 		const double enx = scdata.delta[0] * rinv;
 		const double eny = scdata.delta[1] * rinv;
@@ -188,7 +190,6 @@ namespace ContactModels {
 
 		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 		
-		if (d <= highcut) {
 		const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			
 		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
@@ -198,12 +199,11 @@ namespace ContactModels {
 		i_forces.delta_F[0] += fx;
 		i_forces.delta_F[1] += fy;
 		i_forces.delta_F[2] += fz;
-		}
 	  }
 	}
   
   private:
-	double fluidViscosity,lowcut,highcut;
+	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
 	int history_offset;
 	bool tangentialReduce_;
   };

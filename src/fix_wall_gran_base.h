@@ -179,8 +179,8 @@ public:
     sidata.omega_i = omega;
 
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
-    sidata.nonConr = sidata.radi + sidata.nonConDeltan;
-	sidata.rsq = sidata.r*sidata.r;
+	sidata.nonConr = sidata.radi + sidata.nonConDeltan;
+    sidata.rsq = sidata.r*sidata.r;
 	sidata.nonConrsq = sidata.nonConr*sidata.nonConr;
     const double rinv = 1.0/sidata.r;
     sidata.rinv = rinv;
@@ -284,8 +284,9 @@ public:
        cmodel.endSurfacesIntersect(sidata, mesh, i_forces, j_forces);
        // if there is a surface touch, there will always be a force
        sidata.has_force_update = true;
-	} // surfacesClose is not supported for convex particles
-    else if (!atom->shapetype_flag && !intersectflag)
+    }
+    // surfacesClose is not supported for convex particles
+    else if (!atom->shapetype_flag)
     {
        // apply force update only if selected contact models have requested it
        sidata.has_force_update = false;
