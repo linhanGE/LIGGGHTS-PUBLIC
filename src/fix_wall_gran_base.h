@@ -284,10 +284,10 @@ public:
        cmodel.endSurfacesIntersect(sidata, mesh, i_forces, j_forces);
        // if there is a surface touch, there will always be a force
        sidata.has_force_update = true;
-	} /*if (!intersectflag) {
+	} else if (!intersectflag) {
 	   sidata.has_force_update = false;
        cmodel.surfacesClose(sidata, i_forces, j_forces);
-	}*/
+	}
     // surfacesClose is not supported for convex particles
     else if (!atom->shapetype_flag)
     {

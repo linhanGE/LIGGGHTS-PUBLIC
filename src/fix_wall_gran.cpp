@@ -1127,7 +1127,6 @@ void FixWallGran::post_force_primitive(int vflag)
       {
           primitiveWall_->calcRadialDistance(x_[iPart],rdist);
           vectorCross3D(shearAxisVec_,rdist,v_wall);
-          
       }
       sidata.contact_history = c_history ? c_history[iPart] : NULL;
 
@@ -1152,7 +1151,7 @@ void FixWallGran::post_force_primitive(int vflag)
         sidata.r =  r0_ - sidata.deltan;
         compute_force(sidata, v_wall); // LEGACY CODE (SPH)
       }
-	} else if (deltan > 0){
+	} else if (deltan > 0) {
 			if(!sidata.is_non_spherical || atom->superquadric_flag) {
 				sidata.nonConDeltan = deltan;	
 				sidata.deltan = deltan;
