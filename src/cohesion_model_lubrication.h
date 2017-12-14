@@ -101,7 +101,7 @@ namespace ContactModels {
 	void connectToProperties(PropertyRegistry & registry)
 	{
 		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosity);
-		registry.registerProperty("lowcut", &MODEL_PARAMS::createHighCut);
+		registry.registerProperty("lowcut", &MODEL_PARAMS::createLowCut);
 		//registry.registerProperty("highcut", &MODEL_PARAMS::createLowCut);
 		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
 		registry.connect("lowcut", lowcut,"cohesion_model lubrication");
