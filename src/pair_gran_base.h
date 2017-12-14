@@ -221,7 +221,7 @@ public:
     const bool store_contact_forces_stress = pg->storeContactForcesStress();
     const int freeze_group_bit = pg->freeze_group_bit();
 
-    const double contactDistanceMultiplier = neighbor->contactDistanceFactor*neighbor->contactDistanceFactor;
+    const double contactDistanceMultiplier = (neighbor->contactDistanceFactor-1)*(neighbor->contactDistanceFactor-1);
 
     // fix insert/stream/predefined
     // check if inserted

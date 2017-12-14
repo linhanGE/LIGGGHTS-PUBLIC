@@ -952,7 +952,7 @@ void FixWallGran::post_force_mesh(int vflag)
                 deltan = mesh->resolveTriSphereContactBary(iPart, iTri, sidata.radi, x_[iPart], delta, bary, barysign, atom->shapetype_flag ? false : true);
             #endif
             
-            if(deltan > cutneighmax_) continue;
+            if(deltan > cutneighmax_) continue; //in granule, force cutoff = radsum, cut = force cutoff + skin, cutneighmax = MAX(cutneighmax,cut)
 
             sidata.i = iPart;
 
@@ -996,7 +996,12 @@ void FixWallGran::post_force_mesh(int vflag)
               }
 
               if(!sidata.is_non_spherical || atom->superquadric_flag)
-                sidata.deltan   = -deltan;
+                if (deltan > 0) {
+					sidata.nonConDeltan = deltan;
+					sidata.deltan = 0;
+					intersectflag = false;
+				}
+                else sidata.deltan = -deltan;
               sidata.delta[0] = -delta[0];
               sidata.delta[1] = -delta[1];
               sidata.delta[2] = -delta[2];
@@ -1006,8 +1011,8 @@ void FixWallGran::post_force_mesh(int vflag)
               {
                 sidata.r =  r0_ - sidata.deltan;
                 compute_force(sidata, v_wall); // LEGACY CODE (SPH)
-              }
-            }
+			  } 
+			} 
           }
       }
 
@@ -1128,7 +1133,12 @@ void FixWallGran::post_force_primitive(int vflag)
       }
 
       if(!sidata.is_non_spherical || atom->superquadric_flag)
-        sidata.deltan   = -deltan;
+		if (deltan > 0) {
+			sidata.nonConDeltan = deltan;
+			sidata.deltan = 0;
+			intersectflag = false;
+		}
+        else sidata.deltan = -deltan;
       sidata.delta[0] = -delta[0];
       sidata.delta[1] = -delta[1];
       sidata.delta[2] = -delta[2];

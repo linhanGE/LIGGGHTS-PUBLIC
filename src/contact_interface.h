@@ -66,6 +66,10 @@ struct SurfacesCloseData {
   double rsq;
   double delta[3];  
 
+  double nonConDeltan;
+  double nonConrsq;
+  double nonConr;
+
   double area_ratio;
 
   int *contact_flags;
