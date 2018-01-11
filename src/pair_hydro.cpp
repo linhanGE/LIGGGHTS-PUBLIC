@@ -25,7 +25,6 @@ Contributor: Linhan Ge (University of Newcastle)
 #include "memory.h"
 #include "error.h"
 #include "math_special.h"
-#include "math_extra_liggghts.h"
 
 using namespace LAMMPS_NS;
 
@@ -104,7 +103,7 @@ void PairHydro::compute(int eflag, int vflag)
 			lowcutij = lowcut[itype] [jtype];
 			lamdaij = lamda[itype][jtype];
 			kij = k[itype][jtype];
-			H = MathExtraLiggghts::max(r-radsum,lowcutij);  // lower cut-off distance
+			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
 			H2 = H * H;
 			if ( H2 < cutsq[itype][jtype] ) {               // active when overlap
 				term1 = radtimes/radsum;                    // harmonic mean of the radius
@@ -342,7 +341,7 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
-	H = MathExtraLiggghts::max(r-radsum,lowcutij); // lower cut-off distance
+	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij; // lower cut-off distance
 	double rinv = 1.0/r;
 	force_hydro = -term1*kij*exp(-H/lamdaij);
 	fforce = factor_lj*force_hydro*rinv;

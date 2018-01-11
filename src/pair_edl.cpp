@@ -25,7 +25,6 @@ Contributing author: Linhan Ge (University of Newcastle)
 #include "memory.h"
 #include "error.h"
 #include "math_special.h"
-#include "math_extra_liggghts.h"
 
 using namespace LAMMPS_NS;
 
@@ -102,7 +101,7 @@ void PairEdl::compute(int eflag, int vflag)
 			jtype = type[j];
 			r = sqrt(rsq);
 			lowcutij = lowcut[itype][jtype];
-			H = MathExtraLiggghts::max(r-radsum, lowcutij);
+			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 			H2 = H * H;
 			double Hinv = 1.0/H;
 			double rinv = 1.0/r;
@@ -349,7 +348,7 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	psi2ij = psi2[itype][jtype];
 	r = sqrt(rsq);
 	lowcutij = lowcut[itype][jtype];
-	H = MathExtraLiggghts::max(r-radsum,lowcutij);
+	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 	double Hinv = 1.0/H;
 	double rinv = 1/r;
 	force_edl = term1*epsilonaij*(2*psi1ij*psi2ij*log(1+exp(-kappa*H)/(1-exp(-kappa*H)))+(psi1ij*psi1ij+psi2ij*psi2ij)*log(1-exp(-2*kappa*H)));
