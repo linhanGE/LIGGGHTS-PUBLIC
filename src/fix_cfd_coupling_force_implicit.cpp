@@ -94,7 +94,7 @@ FixCfdCouplingForceImplicit::FixCfdCouplingForceImplicit(LAMMPS *lmp, int narg, 
         }
         else if (strcmp(arg[iarg],"CAddRhoFluid") == 0)
         {
-            if(narg < iarg+1)
+            if(narg < iarg+2)
                 error->fix_error(FLERR,this,"not enough arguments for 'CAddRhoFluid'");
             iarg++;
             useAM_ = true;
@@ -112,7 +112,8 @@ FixCfdCouplingForceImplicit::FixCfdCouplingForceImplicit(LAMMPS *lmp, int narg, 
 			CAddRhoFluid_        = atof(arg[iarg]);
 			iarg++;
 		}
-		else iarg++;
+		else 
+			iarg++;
     }
 	vOld = NULL;
     grow_arrays(atom->nmax);
