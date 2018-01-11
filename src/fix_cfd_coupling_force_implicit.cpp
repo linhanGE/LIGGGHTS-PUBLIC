@@ -94,7 +94,7 @@ FixCfdCouplingForceImplicit::FixCfdCouplingForceImplicit(LAMMPS *lmp, int narg, 
         }
         else if (strcmp(arg[iarg],"CAddRhoFluid") == 0)
         {
-            if(narg < iarg+2)
+            if(narg < iarg+1)
                 error->fix_error(FLERR,this,"not enough arguments for 'CAddRhoFluid'");
             iarg++;
             useAM_ = true;
@@ -104,9 +104,19 @@ FixCfdCouplingForceImplicit::FixCfdCouplingForceImplicit(LAMMPS *lmp, int narg, 
                     CAddRhoFluid_);
             iarg++;
         }
-        else
-           iarg++;
+        else if (strcmp(arg[iarg],"addedMassForce") == 0)
+		{
+			if(narg < iarg+2)
+                error->fix_error(FLERR,this,"not enough arguments for 'addedMassForce'");
+            iarg++;
+			CAddRhoFluid_        = atof(arg[iarg]);
+			iarg++;
+		}
+		else iarg++;
     }
+	vOld = NULL;
+    grow_arrays(atom->nmax);
+    atom->add_callback(0);
 
   nevery = 1;
 }
@@ -167,6 +177,22 @@ void FixCfdCouplingForceImplicit::post_create()
         fixarg[10]="0.";
         fix_uf_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
     }
+	if(!fix_DUDt_)
+    {
+        const char* fixarg[11];
+        fixarg[0]="DUDt";
+        fixarg[1]="all";
+        fixarg[2]="property/atom";
+        fixarg[3]="DUDt";
+        fixarg[4]="vector"; // 1 vector per particle to be registered
+        fixarg[5]="yes";    // restart
+        fixarg[6]="no";     // communicate ghost
+        fixarg[7]="no";     // communicate rev
+        fixarg[8]="0.";
+        fixarg[9]="0.";
+        fixarg[10]="0.";
+        fix_DUDt_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+    }
     if(!fix_KslRotation_)
     {
       const char* fixarg[11];
@@ -223,6 +249,7 @@ void FixCfdCouplingForceImplicit::pre_delete(bool unfixflag)
 {
     if(unfixflag && fix_Ksl_) modify->delete_fix("Ksl");
     if(unfixflag && fix_uf_) modify->delete_fix("uf");
+	if(unfixflag && fix_DUDt_) modify->delete_fix("DUDt");
     if(unfixflag && fix_KslRotation_) modify->delete_fix("KslRotation");
     if(unfixflag && fix_KslExtra_) modify->delete_fix("KslExtra");
     if(unfixflag && fix_ex_) modify->delete_fix("ex");
@@ -237,10 +264,18 @@ void FixCfdCouplingForceImplicit::init()
     // values to come from OF
     fix_coupling_->add_pull_property("Ksl","scalar-atom");
     fix_coupling_->add_pull_property("uf","vector-atom");
+	fix_coupling_->add_pull_property("DUDt","vector-atom");
     fix_coupling_->add_pull_property("KslRotation","vector-atom");
     fix_coupling_->add_pull_property("KslExtra","vector-atom");
     fix_coupling_->add_pull_property("ex","vector-atom");
-
+	int nlocal = atom->nlocal;
+    int *mask = atom->mask;
+    for (int i = 0; i < nlocal; i++){
+      if (mask[i] & groupbit) {
+        vOld[i][0] = 0.;
+        vOld[i][1] = 0.;
+        vOld[i][2] = 0.;
+      }
     deltaT_ = 0.5 * update->dt * force->ftm2v;
 }
 
@@ -254,8 +289,14 @@ void FixCfdCouplingForceImplicit::post_force(int)
   int nlocal = atom->nlocal;
   double *Ksl = fix_Ksl_->vector_atom;
   double **uf = fix_uf_->array_atom;
+  double timeStep = update->dt;
+  double **DUDt = fix_DUDt_->array_atom;
   double **dragforce = fix_dragforce_->array_atom;
   double frc[3];
+  double *rmass = atom->rmass;     // per-atom mass
+  double accX = 0.;
+  double accY = 0.;
+  double accZ = 0.;
 
   vectorZeroize3D(dragforce_total);
   vectorZeroize3D(hdtorque_total);
@@ -280,6 +321,18 @@ void FixCfdCouplingForceImplicit::post_force(int)
 
         // add up forces for post-proc
         vectorAdd3D(dragforce_total,dragforce[i],dragforce_total);
+
+		accX = ((v[i][0] - vOld[i][0])/timeStep),
+        accY = ((v[i][1] - vOld[i][1])/timeStep),
+        accZ = ((v[i][2] - vOld[i][2])/timeStep),
+
+		f[i][0] += CAddRhoFluid_*rmass[i]*(DUDt[i][0] - accX);
+        f[i][1] += CAddRhoFluid_*rmass[i]*(DUDt[i][1] - accY);
+        f[i][2] += CAddRhoFluid_*rmass[i]*(DUDt[i][2] - accZ);
+
+		vOld[i][0] = v[i][0];
+        vOld[i][1] = v[i][1];
+        vOld[i][2] = v[i][2];
     }
   }
 }
@@ -350,4 +403,58 @@ void FixCfdCouplingForceImplicit::end_of_step()
         vectorAdd3D(dragforce_total,frc,dragforce_total);
      }
   }
+}
+/* ----------------------------------------------------------------------
+   memory usage of local atom-based array
+------------------------------------------------------------------------- */
+
+double FixCfdCouplingForceImplicit::memory_usage()
+{
+  double bytes = 3*atom->nmax * sizeof(double);
+  bytes += atom->nmax * sizeof(int);
+  return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   allocate atom-based array
+------------------------------------------------------------------------- */
+
+void FixCfdCouplingForceImplicit::grow_arrays(int nmax)
+{
+  memory->grow(vOld,nmax,3,"fluid_drag:vOld");
+}
+
+/* ----------------------------------------------------------------------
+   copy values within local atom-based array
+------------------------------------------------------------------------- */
+
+void FixCfdCouplingForceImplicit::copy_arrays(int i, int j, int delflag)
+{
+  vOld[j][0] = vOld[i][0];
+  vOld[j][1] = vOld[i][1];
+  vOld[j][2] = vOld[i][2];
+}
+
+/* ----------------------------------------------------------------------
+   pack values in local atom-based array for exchange with another proc
+------------------------------------------------------------------------- */
+
+int FixCfdCouplingForceImplicit::pack_exchange(int i, double *buf)
+{
+  buf[0] = vOld[i][0];
+  buf[1] = vOld[i][1];
+  buf[2] = vOld[i][2];
+  return 3;
+}
+
+/* ----------------------------------------------------------------------
+   unpack values in local atom-based array from exchange with another proc
+------------------------------------------------------------------------- */
+
+int FixCfdCouplingForceImplicit::unpack_exchange(int nlocal, double *buf)
+{
+  vOld[nlocal][0] = buf[0];
+  vOld[nlocal][1] = buf[1];
+  vOld[nlocal][2] = buf[2];
+  return 3;
 }

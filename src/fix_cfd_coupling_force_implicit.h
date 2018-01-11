@@ -64,6 +64,11 @@ class FixCfdCouplingForceImplicit : public FixCfdCouplingForce  {
   virtual void init();
   void post_force(int);
   void end_of_step();
+  double memory_usage();
+  void grow_arrays(int);
+  void copy_arrays(int, int, int);
+  int pack_exchange(int, double *);
+  int unpack_exchange(int, double *);
 
  protected:
   double deltaT_;
@@ -74,9 +79,11 @@ class FixCfdCouplingForceImplicit : public FixCfdCouplingForce  {
   bool   useAM_;
   double CAddRhoFluid_;   //Added mass coefficient times relative fluid density (C_add*rhoFluid/rhoP)
   double onePlusCAddRhoFluid_;
+  double **vOld;
 
   class FixPropertyAtom* fix_Ksl_;
   class FixPropertyAtom* fix_uf_;
+  class FixPropertyAtom* fix_DUDt_;
   class FixPropertyAtom* fix_KslRotation_;
   class FixPropertyAtom* fix_ex_;
   class FixPropertyAtom* fix_KslExtra_;
