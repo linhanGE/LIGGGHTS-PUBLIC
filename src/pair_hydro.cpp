@@ -54,7 +54,7 @@ void PairHydro::compute(int eflag, int vflag)
 	int i,j,ii,jj,inum,jnum,itype,jtype;
 	double xtmp,ytmp,ztmp,delx,dely,delz,evdwl;
 	double rsq,force_hydro;
-	double radi,radj,radsum,radtimes,r,factor_lj,rinv;
+	double radi,radj,radsum,radtimes,r,rinv;
 	double lamdaij,H,H2,kij,lowcutij;
 	double term1;
 	int *ilist,*jlist,*numneigh,**firstneigh;
