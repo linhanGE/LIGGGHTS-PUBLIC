@@ -53,6 +53,7 @@
 #include "mpi_liggghts.h"
 #include "fix_cfd_coupling_force.h"
 #include "fix_property_atom.h"
+#include "fix_ap.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -98,7 +99,20 @@ FixCfdCouplingForce::FixCfdCouplingForce(LAMMPS *lmp, int narg, char **arg) : Fi
                 error->fix_error(FLERR,this,"expecting 'yes' or 'no' after 'transfer_density'");
             iarg++;
             hasargs = true;
-        }
+        } else if(strcmp(arg[iarg],"transfer_acceleration") == 0) 
+		{
+			 if(narg < iarg+2)
+                error->fix_error(FLERR,this,"not enough arguments for 'transfer_acceleration'");
+            iarg++;
+            if(strcmp(arg[iarg],"yes") == 0)
+                use_virtualMass_ = true;
+            else if(strcmp(arg[iarg],"no") == 0)
+                use_virtualMass_ = false;
+            else
+                error->fix_error(FLERR,this,"expecting 'yes' or 'no' after 'transfer_acceleration'");
+            iarg++;
+            hasargs = true;
+		}
         else if(strcmp(arg[iarg],"transfer_torque") == 0)
         {
             if(narg < iarg+2)
@@ -362,7 +376,8 @@ void FixCfdCouplingForce::init()
     fix_coupling_->add_push_property("x","vector-atom");
     fix_coupling_->add_push_property("v","vector-atom");
     fix_coupling_->add_push_property("radius","scalar-atom");
-    if(use_superquadric_) {
+	fix_coupling_->add_push_property("ap","scalar-atom"); //particle acceleration
+	if(use_superquadric_) {
       fix_coupling_->add_push_property("volume","scalar-atom");
       fix_coupling_->add_push_property("area","scalar-atom");
       fix_coupling_->add_push_property("shape","vector-atom");
@@ -371,6 +386,7 @@ void FixCfdCouplingForce::init()
     }
     if(use_type_) fix_coupling_->add_push_property("type","scalar-atom");
     if(use_dens_) fix_coupling_->add_push_property("density","scalar-atom");
+	if(use_virtualMass_) fix_coupling_->add_push_property("f","scalar-atom");
     if(use_torque_) fix_coupling_->add_push_property("omega","vector-atom");
     if(use_id_) fix_coupling_->add_push_property("id","scalar-atom");
 

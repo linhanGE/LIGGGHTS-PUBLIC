@@ -39,50 +39,33 @@
     Copyright 2009-2012 JKU Linz
 ------------------------------------------------------------------------- */
 
-#ifdef FIX_CLASS
+#ifndef LMP_FIX_AP_H
+#define LMP_FIX_AP_H
 
-FixStyle(couple/cfd/force/implicit,FixCfdCouplingForceImplicit)
-
-#else
-
-#ifndef LMP_FIX_CFD_COUPLING_FORCE_IMPLICIT_H
-#define LMP_FIX_CFD_COUPLING_FORCE_IMPLICIT_H
-
-#include "fix_cfd_coupling_force.h"
+#include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixCfdCouplingForceImplicit : public FixCfdCouplingForce  {
-  friend class FixNVEAsphereBase;
- public:
-  FixCfdCouplingForceImplicit(class LAMMPS *, int, char **);
-  ~FixCfdCouplingForceImplicit();
-  void post_create();
-  void pre_delete(bool unfixflag);
+  class FixAp : public Fix {
 
-  int setmask();
-  virtual void init();
-  void post_force(int);
-  void end_of_step();
+  public:
+    FixAp(class LAMMPS *, int, char **);
+    ~FixAp(){};
+    virtual void post_create();
+    	
+    virtual void init();
+	virtual int setmask();
+	virtual void end_of_step(int);
+	virtual void updatePtrs();
 
- protected:
-  double deltaT_;
+  protected:
+    class FixPropertyAtom* fix_ap;
 
-  bool   useCN_;
-  double CNalpha_;
+    double **ap;
 
-  bool   useAM_;
-  double CAddRhoFluid_;   //Added mass coefficient times relative fluid density (C_add*rhoFluid/rhoP)
-  double onePlusCAddRhoFluid_;
-
-  class FixPropertyAtom* fix_Ksl_;
-  class FixPropertyAtom* fix_uf_;
-  class FixPropertyAtom* fix_KslRotation_;
-  class FixPropertyAtom* fix_ex_;
-  class FixPropertyAtom* fix_KslExtra_;
-};
+    class PairGran *pair_gran;
+  };
 
 }
 
-#endif
 #endif
