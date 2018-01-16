@@ -375,8 +375,8 @@ void FixCfdCouplingForce::init()
 
     fix_coupling_->add_push_property("x","vector-atom");
     fix_coupling_->add_push_property("v","vector-atom");
-    fix_coupling_->add_push_property("radius","scalar-atom");
 	fix_coupling_->add_push_property("ap","vector-atom"); //particle acceleration
+    fix_coupling_->add_push_property("radius","scalar-atom");
 	if(use_superquadric_) {
       fix_coupling_->add_push_property("volume","scalar-atom");
       fix_coupling_->add_push_property("area","scalar-atom");
