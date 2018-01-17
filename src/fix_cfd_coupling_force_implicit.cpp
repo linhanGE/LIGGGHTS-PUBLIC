@@ -288,6 +288,7 @@ void FixCfdCouplingForceImplicit::post_force(int)
 
 void FixCfdCouplingForceImplicit::end_of_step()
 {
+
   if(!useCN_) return; //return if CN not used
 
   double **v = atom->v;
