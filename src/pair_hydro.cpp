@@ -12,6 +12,9 @@ See the README file in the top-level LAMMPS directory.
 /*-----------------------------------------------------------------------------
 This is a hydrophobic force model to be used in the particle-bubble interaction.
 Contributor: Linhan Ge (University of Newcastle)
+Reference:
+Eq.17 from
+Yoon, R.H., Flinn, D.H., Rabinovich, Y.I., 1997. Hydrophobic interactions between dissimilar surfaces. J Colloid Interf Sci 185, 363-370.
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -40,7 +43,7 @@ PairHydro::~PairHydro()
 	if (allocated) {
 		memory->destroy(setflag);
 		memory->destroy(cutsq);
-		memory->destroy(lamda);
+		
 		memory->destroy(k);
 		memory->destroy(lowcut);
 		memory->destroy(cut);
@@ -52,14 +55,11 @@ PairHydro::~PairHydro()
 void PairHydro::compute(int eflag, int vflag)
 {
 	int i,j,ii,jj,inum,jnum,itype,jtype;
-	double xtmp,ytmp,ztmp,delx,dely,delz,evdwl;
-	double rsq,force_hydro;
-	double radi,radj,radsum,radtimes,r,rinv;
-	double lamdaij,H,H2,kij,lowcutij;
-	double term1;
+	double xtmp,ytmp,ztmp,delx,dely,delz;
+	double V_hydro,fx,fy,fz;
+	double rsq,radi,radj,radsum,radtimes,r,rinv,term1,H,Hinv;
+	double kij,lowcutij,cutij;
 	int *ilist,*jlist,*numneigh,**firstneigh;
-
-	evdwl =0.0;
 
 	if (eflag || vflag) ev_setup(eflag,vflag);
 	else evflag = vflag_fdotr = 0;
@@ -101,16 +101,15 @@ void PairHydro::compute(int eflag, int vflag)
 			r = sqrt(rsq);
 			rinv = 1.0/r;
 			lowcutij = lowcut[itype] [jtype];
-			lamdaij = lamda[itype][jtype];
 			kij = k[itype][jtype];
 			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
-			H2 = H * H;
-			if ( H2 < cutsq[itype][jtype] ) {               // active when overlap
+		    Hinv = 1.0/H;
+			if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {               // deactive when overlap
 				term1 = radtimes/radsum;                    // harmonic mean of the radius
-				force_hydro = -term1*kij*exp(-H/lamdaij);   // pay attention to the sign
-				double fx = delx*force_hydro*rinv;
-				double fy = dely*force_hydro*rinv;
-				double fz = delz*force_hydro*rinv;
+				V_hydro = -term1*kij*Hinv/6;                // pay attention to the sign
+				fx = delx*V_hydro*rinv;
+				fy = dely*V_hydro*rinv;
+				fz = delz*V_hydro*rinv;
 
 				f[i][0] += fx;
 				f[i][1] += fy;
@@ -121,17 +120,14 @@ void PairHydro::compute(int eflag, int vflag)
 					f[j][2] -= fz;
 				}
 
-				if (eflag) {
-					evdwl = -term1*kij*exp(-H/lamdaij)*H;
-
-					if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,
-						evdwl,0,f[i][0],f[i][1],f[i][2],delx,dely,delz);
+				// set j = nlocal so that only I gets tallied
+				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 				}
 			}
 		}
 		if (vflag_fdotr) virial_fdotr_compute();
-	}
 }
+
 
 /* --------------------------------------------------------------------------------
 
@@ -151,7 +147,7 @@ void PairHydro::allocate()
 
 	memory->create(cutsq,n+1,n+1,"pair:cutsq");
 	memory->create(cut,n+1,n+1,"pair:cut");
-	memory->create(lamda,n+1,n+1,"pair:lamda");
+	
 	memory->create(k,n+1,n+1,"pair:k");
 	memory->create(lowcut,n+1,n+1,"pair:lowcut");
 }
@@ -186,7 +182,7 @@ set coeffs for one or more type pairs
 
 void PairHydro::coeff(int narg, char **arg)
 {
-	if (narg != 5 && narg != 6)
+	if (narg != 4 && narg != 5)
 		error->all(FLERR,"Incorrect args for pair coefficients");
 	if (!allocated) allocate();
 
@@ -194,17 +190,15 @@ void PairHydro::coeff(int narg, char **arg)
 	force->bounds(arg[0],atom->ntypes,ilo,ihi);	// see details in force.cpp
 	force->bounds(arg[1],atom->ntypes,jlo,jhi);
 
-	double lamda_one = atof(arg[2]);	// atof converts string to double
-	double k_one = atof(arg[3]);
-	double lowcut_one = atof(arg[4]);
+	double k_one = atof(arg[2]);
+	double lowcut_one = atof(arg[3]);
 
 	double cut_one = cut_global;	// cut global set in: PairHydro::settings(int narg, char **arg)
-	if (narg == 6) cut_one = atof(arg[5]);
+	if (narg == 5) cut_one = atof(arg[4]);
 
 	int count = 0;
 	for (int i = ilo; i <= ihi; i++) {
 		for (int j = MAX(jlo,i); j <= jhi; j++) {
-			lamda[i][j] = lamda_one;
 			k[i][j] = k_one;
 			lowcut[i][j] = lowcut_one;
 			cut[i][j] = cut_one;
@@ -230,7 +224,6 @@ double PairHydro::init_one(int i, int j)
 {
 	if (setflag[i][j] == 0) error->all(FLERR,"All pair coeffs are not set");
 
-	lamda[j][i] = lamda[i][j];
 	k[j][i] = k[i][j];
 	lowcut[j][i] = lowcut[i][j];
 
@@ -252,7 +245,6 @@ void PairHydro::write_restart(FILE *fp)
 		for (j = i; j <= atom->ntypes; j++) {
 			fwrite(&setflag[i][j],sizeof(int),1,fp);
 			if (setflag[i][j]) {
-				fwrite(&lamda[i][j],sizeof(double),1,fp);
 				fwrite(&k[i][j],sizeof(double),1,fp);
 				fwrite(&lowcut[i][j],sizeof(double),1,fp);
 				fwrite(&cut[i][j],sizeof(double),1,fp);
@@ -279,12 +271,10 @@ void PairHydro::read_restart(FILE *fp)
 			MPI_Bcast(&setflag[i][j],1,MPI_INT,0,world);
 			if (setflag[i][j]) {
 				if (me == 0) {
-					fread(&lamda[i][j],sizeof(double),1,fp);
 					fread(&k[i][j],sizeof(double),1,fp);
 					fread(&lowcut[i][j],sizeof(double), 1,fp);
 					fread(&cut[i][j],sizeof(double),1,fp);
 				}
-				MPI_Bcast(&lamda[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&k[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&lowcut[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&cut[i][j],1,MPI_DOUBLE,0,world);
@@ -324,10 +314,9 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	double factor_coul, double factor_lj,
 	double &fforce)
 {
-	double phi_hydro,r; // separation distance
-	double force_hydro;
+	double V_hydro;
 	double radsum,radtimes;
-	double lamdaij,H,kij,lowcutij,radi,radj;
+	double r,rinv,lamdaij,H,Hinv,kij,lowcutij,radi,radj;
 	double term1;
 
 	double *radius = atom->radius;
@@ -336,16 +325,14 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	radj = radius[j];
 	radsum = radi + radj;
 	radtimes = radi*radj;
-	lamdaij = lamda[itype][jtype];
 	kij = k[itype][jtype];
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
 	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij; // lower cut-off distance
-	double rinv = 1.0/r;
-	force_hydro = -term1*kij*exp(-H/lamdaij);
-	fforce = factor_lj*force_hydro*rinv;
-	phi_hydro = -term1*kij*exp(-H/lamdaij)*H;
-	return factor_lj*phi_hydro;
+	rinv = 1.0/r;
+	V_hydro = -term1*kij*Hinv/6; 
+	fforce = factor_lj*V_hydro*rinv;
+	return factor_lj*V_hydro;
 } 
 

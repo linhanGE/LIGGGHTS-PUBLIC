@@ -45,9 +45,9 @@ namespace LAMMPS_NS {
 
 	protected:
 		double cut_global;
-		double kappa;
+		double kappainv;
 		double **cut;
-		double **lowcut,**epsilona,**psi1,**psi2;
+		double **lowcut,**epsilon,**psi1,**psi2;
 
 		void allocate();
 

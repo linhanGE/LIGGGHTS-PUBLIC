@@ -12,6 +12,9 @@ See the README file in the top-level LAMMPS directory.
 /*-----------------------------------------------------------------------------
 This is a electrical double layer force model to be used in the particle-bubble interaction.
 Contributing author: Linhan Ge (University of Newcastle)
+Reference:
+Eq.13 from
+Yoon, R.H., Flinn, D.H., Rabinovich, Y.I., 1997. Hydrophobic interactions between dissimilar surfaces. J Colloid Interf Sci 185, 363-370. 
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -40,8 +43,9 @@ PairEdl::~PairEdl()
 	if (allocated) {
 		memory->destroy(setflag);
 		memory->destroy(cutsq);
+
 		memory->destroy(cut);
-		memory->destroy(epsilona);
+		memory->destroy(epsilon);
 		memory->destroy(psi1);
 		memory->destroy(psi2);
 		memory->destroy(lowcut);
@@ -53,12 +57,13 @@ PairEdl::~PairEdl()
 void PairEdl::compute(int eflag, int vflag)
 {
 	int i,j,ii,jj,inum,jnum,itype,jtype;
-	double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
-	double rsq,r,force_edl,factor_lj,term1,H,H2,psi1ij,psi2ij,epsilonaij,lowcutij;
+	double xtmp,ytmp,ztmp,delx,dely,delz,fpair;
+	double rsq,r,rinv,V_edl,term1,H,Hinv;
+	double psi1ij,psi2ij,epsilonij,cutij,lowcutij;
 	double radi,radj,radsum,radtimes;
+	double fx,fy,fz;
 	int *ilist, *jlist, *numneigh, **firstneigh;
-
-	evdwl =0.0;
+		
 	if (eflag || vflag) ev_setup(eflag,vflag);
 	else evflag = vflag_fdotr = 0;
 
@@ -69,6 +74,7 @@ void PairEdl::compute(int eflag, int vflag)
 	int nlocal = atom->nlocal;
 	double *special_lj = force->special_lj;
 	int newton_pair = force->newton_pair;
+
 	inum = list->inum;
 	ilist = list->ilist;
 	numneigh = list->numneigh;
@@ -88,9 +94,6 @@ void PairEdl::compute(int eflag, int vflag)
 		jnum = numneigh[i];
 		for (jj = 0; jj < jnum; jj++) {
 			j = jlist[jj];
-			factor_lj = special_lj[sbmask(j)];
-			j &= NEIGHMASK;
-
 			delx = xtmp - x[j][0];
 			dely = ytmp - x[j][1];
 			delz = ztmp - x[j][2];
@@ -100,35 +103,33 @@ void PairEdl::compute(int eflag, int vflag)
 			radtimes = radi*radj;
 			jtype = type[j];
 			r = sqrt(rsq);
+			cutij = cut[itype][jtype];
 			lowcutij = lowcut[itype][jtype];
 			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
-			H2 = H * H;
-			double Hinv = 1.0/H;
-			double rinv = 1.0/r;
-			if (H2 < cutsq[itype][jtype] && rsq > radsum*radsum) {
-				term1 = M_PI*radtimes/radsum;
-				epsilonaij = epsilona[itype][jtype];
+			Hinv = 1.0/H;
+			rinv = 1.0/r;
+			if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
+				term1 = radtimes/radsum;
+				epsilonij = epsilon[itype][jtype];
 				psi1ij = psi1[itype][jtype];
 				psi2ij = psi2[itype][jtype];
-				/*double e = 1.602e-19;
-				double kB = 1.38e-23;
-				double T = 298.15 */
-				force_edl = term1*epsilonaij*(2*psi1ij*psi2ij*log(1+exp(-kappa*H)/(1-exp(-kappa*H)))+(psi1ij*psi1ij+psi2ij*psi2ij)*log(1-exp(-2*kappa*H)));
-				fpair = factor_lj*force_edl * Hinv*rinv;
-				f[i][0] += delx*fpair;
-				f[i][1] += dely*fpair;
-				f[i][2] += delz*fpair;
+                V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)*(2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)*
+					log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+log(1-exp(-2*H/kappainv)));
+				fpair = V_edl * Hinv*rinv;
+				fx = fpair*delx;
+				fy = fpair*dely;
+				fz = fpair*delz;
+				f[i][0] += fx;
+				f[i][1] += fy;
+				f[i][2] += fz;
 				if (newton_pair || j < nlocal) {
-					f[j][0] -= delx*fpair;
-					f[j][1] -= dely*fpair;
-					f[j][2] -= delz*fpair;
+					f[j][0] -= fx;
+					f[j][1] -= fy;
+					f[j][2] -= fz;
 				}
 
-				if (eflag) {
-					evdwl = factor_lj*term1*epsilonaij*(2*psi1ij*psi2ij*log(1+exp(-kappa*H)/(1-exp(-kappa*H)))+(psi1ij*psi1ij+psi2ij*psi2ij)*log(1-exp(-2*kappa*H)));
-				}
-
-				if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,evdwl,0,f[i][0],f[i][1],f[i][2],delx,dely,delz);
+				// set j = nlocal so that only I gets tallied
+				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 			}
 		}
 	}
@@ -154,7 +155,7 @@ void PairEdl::allocate()
 
 	memory->create(cutsq,n+1,n+1,"pair:cutsq");
 	memory->create(cut,n+1,n+1,"pair:cut");
-	memory->create(epsilona,n+1,n+1,"pair:epsilona");
+	memory->create(epsilon,n+1,n+1,"pair:epsilon");
 	memory->create(psi1,n+1,n+1,"pair:psi1");
 	memory->create(psi2,n+1,n+1,"pair:psi2");
 	memory->create(lowcut,n+1,n+1,"pair:lowcut");
@@ -170,7 +171,7 @@ void PairEdl::settings(int narg, char **arg)
 
 	if (narg != 2) error->all(FLERR,"Illegal pair_style command");
 
-	kappa = force->numeric(FLERR,arg[0]);
+	kappainv = force->numeric(FLERR,arg[0]);
 	cut_global = force->numeric(FLERR,arg[1]);
 
 	// reset cutoffs that have been explicitly set
@@ -208,7 +209,7 @@ void PairEdl::coeff(int narg, char **arg)
 	int count = 0;
 	for (int i = ilo; i <= ihi; i++) {
 		for (int j = MAX(jlo,i); j <= jhi; j++) {
-			epsilona[i][j] = epsilona_one;
+			epsilon[i][j] = epsilona_one;
 			psi1[i][j] = psi1_one;
 			psi2[i][j] = psi2_one;
 			lowcut[i][j] = lowcut_one;
@@ -232,7 +233,7 @@ double PairEdl::init_one(int i, int j)
 {
 	if (setflag[i][j] == 0) error->all(FLERR,"All pair coeffs are not set");
 
-	epsilona[i][j] = epsilona[i][j];
+	epsilon[i][j] = epsilon[i][j];
 	psi1[i][j] = psi1[j][i];
 	psi2[i][j] = psi2[j][i];
 	lowcut[i][j] = lowcut[j][i];
@@ -254,7 +255,7 @@ void PairEdl::write_restart(FILE *fp)
 		for (j = i; j <= atom->ntypes; j++) {
 			fwrite(&setflag[i][j],sizeof(int),1,fp);
 			if (setflag[i][j]) {
-				fwrite(&epsilona[i][j],sizeof(double),1,fp);
+				fwrite(&epsilon[i][j],sizeof(double),1,fp);
 				fwrite(&psi1[i][j],sizeof(double),1,fp);
 				fwrite(&psi2[i][j],sizeof(double),1,fp);
 				fwrite(&lowcut[i][j],sizeof(double),1,fp);
@@ -282,13 +283,13 @@ void PairEdl::read_restart(FILE *fp)
 			MPI_Bcast(&setflag[i][j],1,MPI_INT,0,world);
 			if (setflag[i][j]) {
 				if (me == 0) {
-					fread(&epsilona[i][j],sizeof(double),1,fp);
+					fread(&epsilon[i][j],sizeof(double),1,fp);
 					fread(&psi1[i][j],sizeof(double),1,fp);
 					fread(&psi2[i][j],sizeof(double),1,fp);
 					fread(&lowcut[i][j],sizeof(double),1,fp);
 					fread(&cut[i][j],sizeof(double),1,fp);
 				}
-				MPI_Bcast(&epsilona[i][j],1,MPI_DOUBLE,0,world);
+				MPI_Bcast(&epsilon[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&psi1[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&psi2[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&lowcut[i][j],1,MPI_DOUBLE,0,world);
@@ -303,7 +304,7 @@ proc 0 writes to restart file
 
 void PairEdl::write_restart_settings(FILE *fp)
 {
-	fwrite(&kappa,sizeof(double),1,fp);
+	fwrite(&kappainv,sizeof(double),1,fp);
 	fwrite(&cut_global,sizeof(double),1,fp);
 	//fwrite(&offset_flag,sizeof(int),1,fp);
 	fwrite(&mix_flag,sizeof(int),1,fp);
@@ -316,11 +317,11 @@ proc 0 reads from restart file, bcasts
 void PairEdl::read_restart_settings(FILE *fp)
 {
 	if (comm->me == 0) {
-		fread(&kappa,sizeof(double),1,fp);
+		fread(&kappainv,sizeof(double),1,fp);
 		fread(&cut_global,sizeof(double),1,fp);
 		fread(&mix_flag,sizeof(int),1,fp);
 	}
-	MPI_Bcast(&kappa,1,MPI_DOUBLE,0,world);
+	MPI_Bcast(&kappainv,1,MPI_DOUBLE,0,world);
 	MPI_Bcast(&cut_global,1,MPI_DOUBLE,0,world);
 	MPI_Bcast(&mix_flag,1,MPI_INT,0,world);
 }
@@ -333,8 +334,9 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	double factor_coul, double factor_lj,
 	double &fforce)
 {
-	double r,term1,H,force_edl,phi_edl,psi1ij,psi2ij,epsilonaij,lowcutij,radi,radj;
-	double radsum,radtimes;
+	double r,radi,radj,term1,radsum,radtimes,H,Hinv,rinv;
+	double psi1ij,psi2ij,epsilonij,lowcutij;
+	double V_edl;
 
 	double *radius = atom->radius;
 	radi = radius[i];
@@ -343,17 +345,16 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	radtimes = radi*radj;
 
 	term1 = M_PI*radtimes/radsum;
-	epsilonaij = epsilona[itype][jtype];
+	epsilonij = epsilon[itype][jtype];
 	psi1ij = psi1[itype][jtype];
 	psi2ij = psi2[itype][jtype];
 	r = sqrt(rsq);
 	lowcutij = lowcut[itype][jtype];
 	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
-	double Hinv = 1.0/H;
-	double rinv = 1/r;
-	force_edl = term1*epsilonaij*(2*psi1ij*psi2ij*log(1+exp(-kappa*H)/(1-exp(-kappa*H)))+(psi1ij*psi1ij+psi2ij*psi2ij)*log(1-exp(-2*kappa*H)));
-		fforce = factor_lj*force_edl*Hinv*rinv;
-	phi_edl = force_edl;
-	return factor_lj*phi_edl;
+	Hinv = 1.0/H;
+	rinv = 1/r;
+	V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)*(2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)*log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+log(1-exp(-2H/kappainv)));
+	fforce = factor_lj*V_edl*Hinv*rinv;
+	return factor_lj*V_edl;
 } 
 

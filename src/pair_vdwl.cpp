@@ -9,9 +9,18 @@
    the GNU General Public License.
 
    See the README file in the top-level LAMMPS directory.
+--------------------------------------------------------------------------*/
 
+/*-----------------------------------------------------------------------------
    contributor: Linhan Ge (University of Newcastle)
+
+   This is a electrical double layer force model to be used in the particle-bubble interaction.
+   Contributing author: Linhan Ge (University of Newcastle)
+   Reference:
+   Eq.14 from
+   Yoon, R.H., Flinn, D.H., Rabinovich, Y.I., 1997. Hydrophobic interactions between dissimilar surfaces. J Colloid Interf Sci 185, 363-370. 
 ------------------------------------------------------------------------- */
+
 
 #include "math.h"
 #include "stdlib.h"
@@ -50,14 +59,13 @@ PairVdwl::~PairVdwl()
 void PairVdwl::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum,itype,jtype;
-  double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
-  double rsq,force_vdwl;
-  double radi,radj,radsum,radtimes,r,factor_lj;
-  double A132ij,H,H2,lowcutij;
-  double term1;
+  double xtmp,ytmp,ztmp,delx,dely,delz;
+  double V_vdwl,fpair,fx,fy,fz;
+  double rsq,radi,radj,radsum,radtimes,r,H,Hinv,rinv,term1;
+  double A132ij,lowcutij,cutij;
+  double b,l,c;
   int *ilist,*jlist,*numneigh,**firstneigh;
 
-  evdwl = 0.0;
   if (eflag || vflag) ev_setup(eflag,vflag);
   else evflag = vflag_fdotr = 0;
 
@@ -88,9 +96,7 @@ void PairVdwl::compute(int eflag, int vflag)
 
 	for (jj = 0; jj < jnum; jj++) {
 	  j = jlist[jj];
-	  factor_lj = special_lj[sbmask(j)];
-	  j &= NEIGHMASK;
-
+	  
 	  delx = xtmp - x[j][0];
 	  dely = ytmp - x[j][1];
 	  delz = ztmp - x[j][2];
@@ -101,30 +107,32 @@ void PairVdwl::compute(int eflag, int vflag)
 	  jtype = type[j];
 	  lowcutij = lowcut[itype][jtype];
 	  H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
-	  H2 = H*H;
-	  double Hinv = 1.0/H;
-	  double rinv = 1.0/r;
-	  if (rsq >= radsum*radsum) {
+	  Hinv = 1.0/H;
+	  rinv = 1.0/r;
+	  if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {
 		A132ij = A132[itype][jtype];
 		term1 = radtimes/radsum;
-		force_vdwl = -A132ij/(6*H)*term1;
-		fpair = factor_lj*force_vdwl*Hinv*rinv;
+		b = 3e-17;
+		l = 3.3e15;
+		c = 3e8;
+		V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
+		fpair = V_vdwl*Hinv*rinv;
 		
-		f[i][0] += delx*fpair;
-		f[i][1] += dely*fpair;
-		f[i][2] += delz*fpair;
+		fx += delx*fpair;
+		fy += dely*fpair;
+		fz += delz*fpair;
+
+		f[i][0] += fx;
+		f[i][1] += fy;
+		f[i][2] += fz;
 		if (newton_pair || j < nlocal) {
-		  f[j][0] -= delx*fpair;
-		  f[j][1] -= dely*fpair;
-		  f[j][2] -= delz*fpair;
+		  f[j][0] -= fx;
+		  f[j][1] -= fy;
+		  f[j][2] -= fz;
 		}
 
-		if (eflag) {
-		  evdwl = -A132ij/(6*H)*term1;
-		}
-
-		if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,
-							 evdwl,0.0,f[i][0],f[i][1],f[i][2],delx,dely,delz);
+		// set j = nlocal so that only I gets tallied
+		if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 	  }
 	}
   }
@@ -146,7 +154,10 @@ void PairVdwl::allocate()
 	for (int j = i; j <= n; j++)
 	  setflag[i][j] = 0;
 
-  memory->create(cutsq,n+1,n+1,"pair:cutsq");
+  /* custsq is set in pair.cpp 
+  cut = init_one(i,j);
+  cutsq[i][j] = cutsq[j][i] = cut*cut;*/
+  memory->create(cutsq,n+1,n+1,"pair:cutsq"); 
 
   memory->create(A132,n+1,n+1,"pair:A132");
   memory->create(lowcut,n+1,n+1,"pair:lowcut");
@@ -314,9 +325,11 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
   double H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
   double Hinv = 1.0/H;
   double rinv = 1.0/r;
-  double force_vdwl = -A132ij/(6*H)*term1;
-  fforce = factor_lj*force_vdwl*Hinv*rinv;
-  double phi_vdwl = -A132ij/(6*H)*term1;
-  
-  return factor_lj*phi_vdwl;
+  double b = 3e-17;
+  double l = 3.3e15;
+  double c = 3e8;
+  double V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
+  fforce = factor_lj*V_vdwl*Hinv*rinv;
+
+  return factor_lj*V_vdwl;
 }

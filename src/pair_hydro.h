@@ -50,7 +50,7 @@ namespace LAMMPS_NS{
 
 		double cut_global;
 		double **cut,**lowcut;
-		double **lamda,**k;
+		double **k;
 
 		void allocate();
 	};
