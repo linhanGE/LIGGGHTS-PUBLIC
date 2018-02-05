@@ -63,6 +63,7 @@ namespace MODEL_PARAMS
   static const char * COHESION_DISTANCE_SETTINGS = "cohesionDistanceSettings";
   static const char * COHESION_MODEL_SWITCHES    = "cohesionModelSwitches";
   static const char * COHESION_ENERGY_DENSITY = "cohesionEnergyDensity";
+  static const char * CONTACT_ANGLE = "conAngle";
   static const char * CHARACTERISTIC_VELOCITY = "characteristicVelocity";
   static const char * YOUNGS_MODULUS = "youngsModulus";
   static const char * POISSONS_RATIO = "poissonsRatio";
@@ -293,6 +294,10 @@ namespace MODEL_PARAMS
     return createPerTypePairProperty(registry, COHESION_ENERGY_DENSITY, caller);
   }
 
+  MatrixProperty* createConAngle(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+  {
+    return createPerTypePairProperty(registry, CONTACT_ANGLE, caller);
+  }
   /* ---------------------------------------------------------------------- */
 
   VectorProperty * createCohesionDistanceSettings(PropertyRegistry & registry, const char * caller, bool sanity_checks)
