@@ -42,7 +42,7 @@
 ------------------------------------------------------------------------- */
 
 #ifdef COHESION_MODEL
-COHESION_MODEL(COHESION_PB,pb,1)
+COHESION_MODEL(COHESION_PB,pb,9)
 #else
 
 #ifndef COHESION_MODEL_PB_H_
@@ -99,11 +99,11 @@ namespace ContactModels {
 
 	  double rb = 0, rp = 0;
 	  if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
-		  double rp = rhoi > 10 ? ri : rj;
-		  double rb = rhoi > 10 ? rj : ri;		
+		  rp = rhoi > 10 ? ri : rj;
+		  rb = rhoi > 10 ? rj : ri;		
 	  } else {
-		  double rp = rhoi >= 1 ? ri : rj;
-		  double rb = rhoi >= 1 ? rj : ri;		
+		  rp = rhoi >= 1 ? ri : rj;
+		  rb = rhoi >= 1 ? rj : ri;		
 	  }
 	  //const double sin_alpha = Ri/rp;
 	  const double hp = sqrt(rp * rp - Ri * Ri);
