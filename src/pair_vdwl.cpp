@@ -74,7 +74,6 @@ void PairVdwl::compute(int eflag, int vflag)
   double *radius = atom->radius;
   int *type = atom->type;
   int nlocal = atom->nlocal;
-  double *special_lj = force->special_lj;
   int newton_pair = force->newton_pair;
 
   inum = list->inum;
@@ -109,7 +108,7 @@ void PairVdwl::compute(int eflag, int vflag)
 	  H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 	  Hinv = 1.0/H;
 	  rinv = 1.0/r;
-	  if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {
+	  if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
 		A132ij = A132[itype][jtype];
 		term1 = radtimes/radsum;
 		b = 3e-17;

@@ -71,6 +71,7 @@ namespace MODEL_PARAMS
     VectorProperty* createCoalescenceModelSettings(PropertyRegistry & registry, const char * caller, bool sanity_checks);
 
     MatrixProperty* createCohesionEnergyDensity(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+	MatrixProperty* createConAngle(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     VectorProperty* createCohesionDistanceSettings(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     VectorProperty* createCohesionModelSwitches(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     ScalarProperty* createCharacteristicVelocity(PropertyRegistry & registry, const char * caller, bool sanity_checks);

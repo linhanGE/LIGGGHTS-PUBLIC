@@ -72,7 +72,6 @@ void PairEdl::compute(int eflag, int vflag)
 	double *radius = atom->radius;
 	int *type = atom->type;
 	int nlocal = atom->nlocal;
-	double *special_lj = force->special_lj;
 	int newton_pair = force->newton_pair;
 
 	inum = list->inum;
@@ -108,13 +107,17 @@ void PairEdl::compute(int eflag, int vflag)
 			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 			Hinv = 1.0/H;
 			rinv = 1.0/r;
-			if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
+			if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
 				term1 = radtimes/radsum;
 				epsilonij = epsilon[itype][jtype];
 				psi1ij = psi1[itype][jtype];
 				psi2ij = psi2[itype][jtype];
-                V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)*(2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)*
-					log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+log(1-exp(-2*H/kappainv)));
+				V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
+					(
+						2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
+						log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+ \
+						log(1-exp(-2*H/kappainv))
+					);
 				fpair = V_edl * Hinv*rinv;
 				fx = fpair*delx;
 				fy = fpair*dely;
@@ -219,7 +222,7 @@ void PairEdl::coeff(int narg, char **arg)
 		}
 	}
 
-    if (count == 0) error->all(FLERR,"Incorrect args for pair coefficients");
+	if (count == 0) error->all(FLERR,"Incorrect args for pair coefficients");
 
 }
 
@@ -353,7 +356,12 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 	Hinv = 1.0/H;
 	rinv = 1/r;
-	V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)*(2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)*log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+log(1-exp(-2H/kappainv)));
+	V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
+		(
+		2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
+		log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+ \
+		log(1-exp(-2*H/kappainv))
+		);
 	fforce = factor_lj*V_edl*Hinv*rinv;
 	return factor_lj*V_edl;
 } 

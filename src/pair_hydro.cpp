@@ -104,7 +104,7 @@ void PairHydro::compute(int eflag, int vflag)
 			kij = k[itype][jtype];
 			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
 		    Hinv = 1.0/H;
-			if (rsq >= radsum*radsum & rsq <= (radsum+cutij)*(radsum+cutij)) {               // deactive when overlap
+			if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {               // deactive when overlap
 				term1 = radtimes/radsum;                    // harmonic mean of the radius
 				V_hydro = -term1*kij*Hinv/6;                // pay attention to the sign
 				fx = delx*V_hydro*rinv;
