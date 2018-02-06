@@ -321,8 +321,8 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 {
 	double V_hydro;
 	double radsum,radtimes;
-	double r,rinv,lamdaij,H,Hinv,kij,lowcutij,radi,radj;
-	double term1,fpair;
+	double r,rinv,H,Hinv,kij,lowcutij,radi,radj;
+	double term1,fpair,cutij;
 
 	double *radius = atom->radius;
 
@@ -336,6 +336,7 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	term1 = radtimes/radsum;
 	H = r -radsum; // lower cut-off distance
 	rinv = 1.0/r;
+	cutij = cut[itype][jtype];
 	
 	if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
 		V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
