@@ -59,19 +59,19 @@ COHESION_MODEL(COHESION_PB_LUBRICATION,pb/lubrication,9)
 
 namespace MODEL_PARAMS
 {
-	inline static ScalarProperty* createFluidViscosity(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createFluidViscosityPb(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* fluidViscosityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidViscosity", caller);
 	  return fluidViscosityScalar;
 	}
 	
-	inline static ScalarProperty* createMinSeparationDist(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createMinSeparationDistPb(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* minSeparationDistScalar = MODEL_PARAMS::createScalarProperty(registry, "minSeparationDist", caller);
 	  return minSeparationDistScalar;
 	}
 
-	inline static ScalarProperty* createMaxSeparationDistRatio(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createMaxSeparationDistRatioPb(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* maxSeparationDistRatioScalar = MODEL_PARAMS::createScalarProperty(registry, "maxSeparationDistRatio", caller);
 	  return maxSeparationDistRatioScalar;
@@ -102,8 +102,14 @@ namespace ContactModels {
 	{
 		registry.registerProperty("surfaceTension", &MODEL_PARAMS::createSurfaceTension);
 		registry.registerProperty("contactAngle", &MODEL_PARAMS::createContactAngle);
+		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityPb);
+		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDistPb);
+		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatioPb);
 		registry.connect("surfaceTension",surfaceTension ,"cohesion_model pb/lubrication");
 		registry.connect("contactAngle", contactAngle,"cohesion_model pb/lubrication");
+		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
+		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model lubrication");
+		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model lubrication");
 		// error checks on coarsegraining
 		if(force->cg_active())
 			error->cg(FLERR,"cohesion model pb/lubrication");
