@@ -105,34 +105,37 @@ void PairVdwl::compute(int eflag, int vflag)
 	  radsum = radi + radj;
 	  jtype = type[j];
 	  lowcutij = lowcut[itype][jtype];
-	  H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	  cutij = cut[itype][jtype];
+	  H = r -radsum;
 	  Hinv = 1.0/H;
 	  rinv = 1.0/r;
-	  if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
-		A132ij = A132[itype][jtype];
-		term1 = radtimes/radsum;
-		b = 3e-17;
-		l = 3.3e15;
-		c = 3e8;
-		V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
-		fpair = V_vdwl*Hinv*rinv;
-		
-		fx += delx*fpair;
-		fy += dely*fpair;
-		fz += delz*fpair;
-
-		f[i][0] += fx;
-		f[i][1] += fy;
-		f[i][2] += fz;
-		if (newton_pair || j < nlocal) {
-		  f[j][0] -= fx;
-		  f[j][1] -= fy;
-		  f[j][2] -= fz;
-		}
-
-		// set j = nlocal so that only I gets tallied
-		if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+	  A132ij = A132[itype][jtype];
+	  term1 = radtimes/radsum;
+	  b = 3e-17;
+	  l = 3.3e15;
+	  c = 3e8;
+	  if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
+		  V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
+		  fpair = V_vdwl*Hinv;		
+	  } 
+	  else if (rsq <= (radsum+lowcutij)*(radsum+lowcutij) && rsq > radsum * radsum) {
+		  V_vdwl = -A132ij*term1/(6*lowcutij)*(1-(1+2*b*l)/(1+b*c*1/lowcutij));
+		  fpair = V_vdwl*1/lowcutij;		
 	  }
+	  fx += delx*fpair*rinv;
+      fy += dely*fpair*rinv;
+	  fz += delz*fpair*rinv;
+
+	  f[i][0] += fx;
+	  f[i][1] += fy;
+	  f[i][2] += fz;
+	  if (newton_pair || j < nlocal) {
+		f[j][0] -= fx;
+		f[j][1] -= fy;
+		f[j][2] -= fz;
+		// set j = nlocal so that only I gets tallied
+	  }
+	  if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 	}
   }
 
@@ -327,8 +330,16 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
   double b = 3e-17;
   double l = 3.3e15;
   double c = 3e8;
-  double V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
-  fforce = factor_lj*V_vdwl*Hinv*rinv;
-
+  double V_vdwl,fpair;
+  double cutij = cut[itype][jtype];
+  if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
+	  V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
+	  fpair = V_vdwl*Hinv;
+  }
+  else if (rsq <= (radsum+lowcutij)*(radsum+lowcutij) && rsq >= radsum * radsum) {
+	  V_vdwl = -A132ij*term1/(6*lowcutij)*(1-(1+2*b*l)/(1+b*c*1/lowcutij));
+	  fpair = V_vdwl*1/lowcutij;
+  }
+  fforce = factor_lj*V_vdwl*rinv;
   return factor_lj*V_vdwl;
 }

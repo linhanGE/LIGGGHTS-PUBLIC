@@ -104,36 +104,43 @@ void PairEdl::compute(int eflag, int vflag)
 			r = sqrt(rsq);
 			cutij = cut[itype][jtype];
 			lowcutij = lowcut[itype][jtype];
-			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+			H = r -radsum;
 			Hinv = 1.0/H;
 			rinv = 1.0/r;
-			if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
-				term1 = radtimes/radsum;
-				epsilonij = epsilon[itype][jtype];
-				psi1ij = psi1[itype][jtype];
-				psi2ij = psi2[itype][jtype];
+			term1 = radtimes/radsum;
+			epsilonij = epsilon[itype][jtype];
+			psi1ij = psi1[itype][jtype];
+			psi2ij = psi2[itype][jtype];
+			if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
 				V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
 					(
 						2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
 						log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+ \
 						log(1-exp(-2*H/kappainv))
 					);
-				fpair = V_edl * Hinv*rinv;
-				fx = fpair*delx;
-				fy = fpair*dely;
-				fz = fpair*delz;
-				f[i][0] += fx;
-				f[i][1] += fy;
-				f[i][2] += fz;
-				if (newton_pair || j < nlocal) {
-					f[j][0] -= fx;
-					f[j][1] -= fy;
-					f[j][2] -= fz;
-				}
-
-				// set j = nlocal so that only I gets tallied
-				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+				fpair = V_edl * Hinv;
+			} else if (rsq >= (radsum * radsum) && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
+				V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
+					(
+						2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
+						log(1+exp(-lowcutij/kappainv)/(1-exp(-lowcutij/kappainv)))+ \
+						log(1-exp(-2*lowcutij/kappainv))
+					);
+				fpair = V_edl * 1/lowcutij;
 			}
+			fx = fpair*delx*rinv;
+			fy = fpair*dely*rinv;
+			fz = fpair*delz*rinv;
+			f[i][0] += fx;
+			f[i][1] += fy;
+			f[i][2] += fz;
+			if (newton_pair || j < nlocal) {
+				f[j][0] -= fx;
+				f[j][1] -= fy;
+				f[j][2] -= fz;
+			}
+			// set j = nlocal so that only I gets tallied
+			if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 		}
 	}
 
@@ -338,8 +345,8 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	double &fforce)
 {
 	double r,radi,radj,term1,radsum,radtimes,H,Hinv,rinv;
-	double psi1ij,psi2ij,epsilonij,lowcutij;
-	double V_edl;
+	double psi1ij,psi2ij,epsilonij,lowcutij,cutij;
+	double V_edl,fpair;
 
 	double *radius = atom->radius;
 	radi = radius[i];
@@ -351,18 +358,32 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	epsilonij = epsilon[itype][jtype];
 	psi1ij = psi1[itype][jtype];
 	psi2ij = psi2[itype][jtype];
+	cutij = cut[itype][jtype];
 	r = sqrt(rsq);
 	lowcutij = lowcut[itype][jtype];
-	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	H = r -radsum;
 	Hinv = 1.0/H;
 	rinv = 1/r;
-	V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
-		(
-		2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
-		log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+ \
-		log(1-exp(-2*H/kappainv))
-		);
-	fforce = factor_lj*V_edl*Hinv*rinv;
+	cutij = cut[itype][jtype];
+	if ( rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq < (radsum+cutij)*(radsum+cutij)) {     // do not use cusq
+		V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
+			(
+				2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
+				log(1+exp(-H/kappainv)/(1-exp(-H/kappainv)))+ \
+				log(1-exp(-2*H/kappainv))
+			);
+		fpair = V_edl * Hinv;
+	} 
+	else if (rsq >= (radsum * radsum) && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
+		V_edl = 0.25*epsilonij*term1*(psi1ij*psi1ij+psi2ij*psi2ij)* \
+			(
+				2*psi1ij*psi2ij/(psi1ij*psi1ij+psi2ij*psi2ij)* \
+				log(1+exp(-lowcutij/kappainv)/(1-exp(-lowcutij/kappainv)))+ \
+				log(1-exp(-2*lowcutij/kappainv))
+			);
+		fpair = V_edl * 1/lowcutij;
+	}
+	fforce = fpair*V_edl*rinv;
 	return factor_lj*V_edl;
 } 
 

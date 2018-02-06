@@ -63,7 +63,7 @@ namespace ContactModels {
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase * c) :
 		CohesionModelBase(lmp, hsetup, c),
 		surfaceTension(0.0),
-		conAngle(NULL)
+		contactAngle(NULL)
 	{
 		
 	}
@@ -78,9 +78,9 @@ namespace ContactModels {
 	void connectToProperties(PropertyRegistry & registry)
 	{
 		registry.registerProperty("surfaceTension", &MODEL_PARAMS::createSurfaceTension);
-		registry.registerProperty("conAngle", &MODEL_PARAMS::createConAngle);
+		registry.registerProperty("contactAngle", &MODEL_PARAMS::createContactAngle);
 		registry.connect("surfaceTension",surfaceTension ,"cohesion_model pb");
-		registry.connect("conAngle",conAngle ,"cohesion_model pb");
+		registry.connect("contactAngle", contactAngle,"cohesion_model pb");
 		// error checks on coarsegraining
 		if(force->cg_active())
 			error->cg(FLERR,"cohesion model pb");
@@ -112,7 +112,9 @@ namespace ContactModels {
 	  const double sp = 2*M_PI*rp*hp;
 	  const double sb = 2*M_PI*rb*hb;
 
-	  const double wa = surfaceTension*(sb-sp*cos(conAngle[sidata.itype][sidata.jtype]));
+	  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+
+	  const double wa = surfaceTension*(sb-sp*cos(contactEffAngle));
 
 	  const double F_ad = -wa/deltan;
 	  if(tangentialReduce_) sidata.Fn += F_ad; 
@@ -144,7 +146,7 @@ namespace ContactModels {
 
   private:
 	double surfaceTension;
-	double ** conAngle;
+	double * contactAngle;
 	bool tangentialReduce_;
   };
 }

@@ -57,7 +57,7 @@ void PairHydro::compute(int eflag, int vflag)
 	int i,j,ii,jj,inum,jnum,itype,jtype;
 	double xtmp,ytmp,ztmp,delx,dely,delz;
 	double V_hydro,fx,fy,fz;
-	double rsq,radi,radj,radsum,radtimes,r,rinv,term1,H,Hinv;
+	double rsq,radi,radj,radsum,radtimes,r,rinv,term1,H,Hinv,fpair;
 	double kij,lowcutij,cutij;
 	int *ilist,*jlist,*numneigh,**firstneigh;
 
@@ -101,28 +101,33 @@ void PairHydro::compute(int eflag, int vflag)
 			r = sqrt(rsq);
 			rinv = 1.0/r;
 			lowcutij = lowcut[itype] [jtype];
+			cutij = cut[itype][jtype];
 			kij = k[itype][jtype];
-			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
-		    Hinv = 1.0/H;
-			if (rsq >= radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {               // deactive when overlap
-				term1 = radtimes/radsum;                    // harmonic mean of the radius
-				V_hydro = -term1*kij*Hinv/6;                // pay attention to the sign
-				fx = delx*V_hydro*rinv;
-				fy = dely*V_hydro*rinv;
-				fz = delz*V_hydro*rinv;
-
-				f[i][0] += fx;
-				f[i][1] += fy;
-				f[i][2] += fz;
-				if (newton_pair || j < nlocal) {
-					f[j][0] -= fx;
-					f[j][1] -= fy;
-					f[j][2] -= fz;
-				}
-
-				// set j = nlocal so that only I gets tallied
-				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
-				}
+			//H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
+			H = r -radsum;
+		    Hinv = 1.0/H; 
+			term1 = radtimes/radsum;            // harmonic mean of the radius
+			if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
+				V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
+				fpair = V_hydro/Hinv;
+			}
+			else if (rsq >= radsum*radsum && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
+				V_hydro = -term1*kij*1/lowcutij/6;
+				fpair = V_hydro/lowcutij;
+			}
+			fx = delx*fpair*rinv;
+			fy = dely*V_hydro*rinv;
+			fz = delz*V_hydro*rinv;
+			f[i][0] += fx;
+			f[i][1] += fy;
+			f[i][2] += fz;
+			if (newton_pair || j < nlocal) {
+				f[j][0] -= fx;
+				f[j][1] -= fy;
+				f[j][2] -= fz;
+			}
+			// set j = nlocal so that only I gets tallied
+			if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 			}
 		}
 		if (vflag_fdotr) virial_fdotr_compute();
@@ -317,7 +322,7 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	double V_hydro;
 	double radsum,radtimes;
 	double r,rinv,lamdaij,H,Hinv,kij,lowcutij,radi,radj;
-	double term1;
+	double term1,fpair;
 
 	double *radius = atom->radius;
 
@@ -329,9 +334,19 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
-	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij; // lower cut-off distance
+	H = r -radsum; // lower cut-off distance
 	rinv = 1.0/r;
-	V_hydro = -term1*kij*Hinv/6; 
+	
+	if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
+		V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
+		fpair = V_hydro/Hinv;
+	}
+	else if (rsq >= radsum*radsum && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
+		V_hydro = -term1*kij*1/lowcutij/6;
+		fpair = V_hydro/lowcutij;
+	}
+
+
 	fforce = factor_lj*V_hydro*rinv;
 	return factor_lj*V_hydro;
 } 
