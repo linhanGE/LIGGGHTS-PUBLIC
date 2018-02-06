@@ -39,6 +39,9 @@
 
 	Copyright 2012-     DCS Computing GmbH, Linz
 	Copyright 2009-2012 JKU Linz
+
+	This is a lubrication model using Taylor equation.
+    Contributor: Linhan Ge
 ------------------------------------------------------------------------- */
 
 #ifdef COHESION_MODEL
@@ -113,7 +116,7 @@ namespace ContactModels {
 
 		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
 		if(maxSeparationDistRatio < 1.0)
-            error->one(FLERR,"\n\ncohesion model easo/capillary/viscous requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
+            error->one(FLERR,"\n\ncohesion model lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
 	}
 
 	inline void endSurfacesIntersect(SurfacesIntersectData &sidata, ForceData&, ForceData&) {}
@@ -204,7 +207,6 @@ namespace ContactModels {
   
   private:
 	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
-	int history_offset;
 	bool tangentialReduce_;
   };
  }
