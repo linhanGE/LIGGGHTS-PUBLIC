@@ -192,7 +192,7 @@ void PairVdwl::settings(int narg, char **arg)
 
 void PairVdwl::coeff(int narg, char **arg)
 {
-  if (narg != 4 || narg != 5)
+  if (narg != 4 && narg != 5)
 	error->all(FLERR,"Incorrect args for pair coefficients");
   if (!allocated) allocate();
 
