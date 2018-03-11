@@ -103,21 +103,17 @@ void PairHydro::compute(int eflag, int vflag)
 			lowcutij = lowcut[itype] [jtype];
 			cutij = cut[itype][jtype];
 			kij = k[itype][jtype];
-			//H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
-			H = r -radsum;
-		    Hinv = 1.0/H; 
-			term1 = radtimes/radsum;            // harmonic mean of the radius
-			if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
+			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
+			Hinv = 1.0/H; 
+			term1 = radtimes/radsum;                  // harmonic mean of the radius
+			if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
 				V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
 				fpair = V_hydro/Hinv;
 			}
-			else if (rsq >= radsum*radsum && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
-				V_hydro = -term1*kij*1/lowcutij/6;
-				fpair = V_hydro/lowcutij;
-			}
+			
 			fx = delx*fpair*rinv;
-			fy = dely*V_hydro*rinv;
-			fz = delz*V_hydro*rinv;
+			fy = dely*fpair*rinv;
+			fz = delz*fpair*rinv;
 			f[i][0] += fx;
 			f[i][1] += fy;
 			f[i][2] += fz;
@@ -334,20 +330,15 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
-	H = r -radsum; // lower cut-off distance
+	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij; // lower cut-off distance
 	rinv = 1.0/r;
 	cutij = cut[itype][jtype];
 	
-	if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
-		V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
+	if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
+		V_hydro = -term1*kij*Hinv/6;                    // pay attention to the sign
 		fpair = V_hydro/Hinv;
 	}
-	else if (rsq >= radsum*radsum && rsq <= (radsum+lowcutij)*(radsum+lowcutij)) {
-		V_hydro = -term1*kij*1/lowcutij/6;
-		fpair = V_hydro/lowcutij;
-	}
-
-
+	
 	fforce = factor_lj*V_hydro*rinv;
 	return factor_lj*V_hydro;
 } 

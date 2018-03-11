@@ -116,7 +116,7 @@ namespace ContactModels {
 
 		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
 		if(maxSeparationDistRatio < 1.0)
-            error->one(FLERR,"\n\ncohesion model pb/lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
+			error->one(FLERR,"\n\ncohesion model pb/lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
 	}
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
@@ -153,12 +153,12 @@ namespace ContactModels {
 	  if(tangentialReduce_) sidata.Fn += F_ad; 
 
 	  if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
-	    
-	    const double fx = F_ad * sidata.en[0];
-        const double fy = F_ad * sidata.en[1];
-        const double fz = F_ad * sidata.en[2];
+		
+		const double fx = F_ad * sidata.en[0];
+		const double fy = F_ad * sidata.en[1];
+		const double fz = F_ad * sidata.en[2];
 
-	  	i_forces.delta_F[0] += fx;
+		i_forces.delta_F[0] += fx;
 		i_forces.delta_F[1] += fy;
 		i_forces.delta_F[2] += fz;
 

@@ -84,59 +84,58 @@ void PairVdwl::compute(int eflag, int vflag)
   // loop over neighbors of my atoms
 
   for (ii = 0; ii < inum; ii++) {
-	i = ilist[ii];
-	xtmp = x[i][0];
-	ytmp = x[i][1];
-	ztmp = x[i][2];
-	radi = radius[i];
-	itype = type[i];
-	jlist = firstneigh[i];
-	jnum = numneigh[i];
+		i = ilist[ii];
+		xtmp = x[i][0];
+		ytmp = x[i][1];
+		ztmp = x[i][2];
+		radi = radius[i];
+		itype = type[i];
+		jlist = firstneigh[i];
+		jnum = numneigh[i];
 
 	for (jj = 0; jj < jnum; jj++) {
-	  j = jlist[jj];
+		j = jlist[jj];
 	  
-	  delx = xtmp - x[j][0];
-	  dely = ytmp - x[j][1];
-	  delz = ztmp - x[j][2];
-	  rsq = delx*delx + dely*dely + delz*delz;
-	  r = sqrt(rsq);
-	  radj = radius[j];
-	  radsum = radi + radj;
-	  jtype = type[j];
-	  lowcutij = lowcut[itype][jtype];
-	  cutij = cut[itype][jtype];
-	  H = r -radsum;
-	  Hinv = 1.0/H;
-	  rinv = 1.0/r;
-	  A132ij = A132[itype][jtype];
-	  term1 = radtimes/radsum;
-	  b = 3e-17;
-	  l = 3.3e15;
-	  c = 3e8;
-	  if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
-		  V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
-		  fpair = V_vdwl*Hinv;		
-	  } 
-	  else if (rsq <= (radsum+lowcutij)*(radsum+lowcutij) && rsq > radsum * radsum) {
-		  V_vdwl = -A132ij*term1/(6*lowcutij)*(1-(1+2*b*l)/(1+b*c*1/lowcutij));
-		  fpair = V_vdwl*1/lowcutij;		
-	  }
-	  fx += delx*fpair*rinv;
-      fy += dely*fpair*rinv;
-	  fz += delz*fpair*rinv;
+		delx = xtmp - x[j][0];
+		dely = ytmp - x[j][1];
+		delz = ztmp - x[j][2];
+		rsq = delx*delx + dely*dely + delz*delz;
+		r = sqrt(rsq);
+		radj = radius[j];
+		radsum = radi + radj;
+		radtimes = radi * radj;
+		jtype = type[j];
+		lowcutij = lowcut[itype][jtype];
+		cutij = cut[itype][jtype];
+		H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+		Hinv = 1.0/H;
+		rinv = 1.0/r;
+		A132ij = A132[itype][jtype];
+		term1 = radtimes/radsum;
+		radtimes = radi * radj;
+		/*b = 3e-17;
+		l = 3.3e15;
+		c = 3e8;*/
+		if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
+			V_vdwl = -A132ij/6*Hinv*term1;
+			fpair = V_vdwl*Hinv;		
+		} 
+		
+		fx = delx*fpair*rinv;
+		fy = dely*fpair*rinv;
+		fz = delz*fpair*rinv;
 
-	  f[i][0] += fx;
-	  f[i][1] += fy;
-	  f[i][2] += fz;
-	  if (newton_pair || j < nlocal) {
+		f[i][0] += fx;
+		f[i][1] += fy;
+		f[i][2] += fz;
+		if (newton_pair || j < nlocal) {
 		f[j][0] -= fx;
 		f[j][1] -= fy;
 		f[j][2] -= fz;
 		// set j = nlocal so that only I gets tallied
-	  }
-	  if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
-	}
+		}
+		if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+		}
   }
 
   if (vflag_fdotr) virial_fdotr_compute();
@@ -313,33 +312,28 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
 						  double factor_coul, double factor_lj,
 						  double &fforce)
 {
-  double *radius =atom->radius;
+	double *radius =atom->radius;
 
-  double radi = radius[i];
-  double radj = radius[j];
-  double radsum = radi + radj;
-  double radtimes = radi*radj;
+	double radi = radius[i];
+	double radj = radius[j];
+	double radsum = radi + radj;
+	double radtimes = radi*radj;
   
-  double A132ij = A132[itype][jtype];
-  double lowcutij = lowcut[itype][jtype];
-  double r = sqrt(rsq);
-  double term1 = radtimes/radsum;
-  double H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
-  double Hinv = 1.0/H;
-  double rinv = 1.0/r;
-  double b = 3e-17;
-  double l = 3.3e15;
-  double c = 3e8;
-  double V_vdwl,fpair;
-  double cutij = cut[itype][jtype];
-  if (rsq > (radsum+lowcutij)*(radsum+lowcutij) && rsq <= (radsum+cutij)*(radsum+cutij)) {
-	  V_vdwl = -A132ij*term1/(6*H)*(1-(1+2*b*l)/(1+b*c*Hinv));
-	  fpair = V_vdwl*Hinv;
-  }
-  else if (rsq <= (radsum+lowcutij)*(radsum+lowcutij) && rsq >= radsum * radsum) {
-	  V_vdwl = -A132ij*term1/(6*lowcutij)*(1-(1+2*b*l)/(1+b*c*1/lowcutij));
-	  fpair = V_vdwl*1/lowcutij;
-  }
-  fforce = factor_lj*V_vdwl*rinv;
-  return factor_lj*V_vdwl;
+	double A132ij = A132[itype][jtype];
+	double lowcutij = lowcut[itype][jtype];
+	double r = sqrt(rsq);
+	double term1 = radtimes/radsum;
+	double H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	double Hinv = 1.0/H;
+	double rinv = 1.0/r;
+	/*double b = 3e-17;
+	double l = 3.3e15;
+	double c = 3e8;*/
+	double V_vdwl,fpair;
+	double cutij = cut[itype][jtype];
+	if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
+		V_vdwl = -A132ij/6*Hinv*term1;
+		fpair = V_vdwl*Hinv;
+	fforce = factor_lj*V_vdwl*rinv;
+	return factor_lj*V_vdwl;
 }
