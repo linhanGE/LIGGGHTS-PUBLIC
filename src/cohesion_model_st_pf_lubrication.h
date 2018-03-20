@@ -45,21 +45,22 @@
 ------------------------------------------------------------------------- */
 
 #ifdef COHESION_MODEL
-COHESION_MODEL(COHESION_PB_LUBRICATION,pb/lubrication,9)
+COHESION_MODEL(COHESION_ST_PF_LUBRICATION,st/pf/lubrication,9)
 #else
 
-#ifndef COHESION_MODEL_PB_LUBRICATION_H_
-#define COHESION_MODEL_PB_LUBRICATION_H_
+#ifndef COHESION_MODEL_ST_PF_LUBRICATION_H_
+#define COHESION_MODEL_ST_PF_LUBRICATION_H_
 
 #include "contact_models.h"
 #include "cohesion_model_base.h"
 #include "global_properties.h"
 #include <cmath>
+#include <math.h>
 #include "neighbor.h"
 
 namespace MODEL_PARAMS
 {
-	inline static ScalarProperty* createFluidViscosityPb(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createFluidViscosityPb(PropertyRegistry & registry, const char * caller, bool sanity_checks) // Pb stands for particle-bubble
 	{
 	  ScalarProperty* fluidViscosityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidViscosity", caller);
 	  return fluidViscosityScalar;
@@ -76,6 +77,11 @@ namespace MODEL_PARAMS
 	  ScalarProperty* maxSeparationDistRatioScalar = MODEL_PARAMS::createScalarProperty(registry, "maxSeparationDistRatio", caller);
 	  return maxSeparationDistRatioScalar;
 	}
+	inline static ScalarProperty* createFluidDensityPb(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* fluidDensityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidDensity", caller);
+	  return fluidDensityScalar;
+	}
 }
 
 namespace LIGGGHTS {
@@ -86,7 +92,7 @@ namespace ContactModels {
   public:
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase * c) :
 		CohesionModelBase(lmp, hsetup, c),
-		surfaceTension(0.0), contactAngle(NULL), fluidViscosity(0.0), minSeparationDist(0.),maxSeparationDistRatio(0.)
+		surfaceTension(0.0), contactAngle(NULL), fluidViscosity(0.0), minSeparationDist(0.),maxSeparationDistRatio(0.),fluidDensity(0.0)
 	{
 		
 	}
@@ -94,6 +100,8 @@ namespace ContactModels {
 	void registerSettings(Settings& settings) 
 	{
 		settings.registerOnOff("tangential_reduce",tangentialReduce_,false);
+		settings.registerOnOff("pressure",pressure_,true);
+		settings.registerOnOff("capillary",capillary_,false);
 	}
 
 	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
@@ -105,66 +113,98 @@ namespace ContactModels {
 		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityPb);
 		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDistPb);
 		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatioPb);
-		registry.connect("surfaceTension",surfaceTension ,"cohesion_model pb/lubrication");
-		registry.connect("contactAngle", contactAngle,"cohesion_model pb/lubrication");
-		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
-		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model lubrication");
-		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model lubrication");
+		registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityPb);
+		registry.connect("surfaceTension",surfaceTension ,"cohesion_model st/pf/lubrication");
+		registry.connect("contactAngle", contactAngle,"cohesion_model st/pf/lubrication");
+		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model st/pf/lubrication");
+		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model st/pf/lubrication");
+		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model st/pf/lubrication");
+		registry.connect("fluidDensity", fluidDensity,"cohesion_model st/pf/lubrication");
 		// error checks on coarsegraining
 		if(force->cg_active())
-			error->cg(FLERR,"cohesion model pb/lubrication");
+			error->cg(FLERR,"cohesion model st/pf/lubrication");
 
 		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
 		if(maxSeparationDistRatio < 1.0)
-			error->one(FLERR,"\n\ncohesion model pb/lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
+			error->one(FLERR,"\n\ncohesion model st/pf/lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
 	}
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-	  //r is the distance between the sphere's centers
-	  const double r = sidata.r;
-	  const double ri = sidata.radi;
-	  const double rj = sidata.radj;
-	  const double deltan = sidata.deltan;
-	  const double Ri = 1/(2*r)*sqrt((-r+ri-rj)*(-r-ri+rj)*(-r+ri+rj)*(r+ri+rj));
-	  const double rhoi = sidata.densityi;
-	  const double rhoj = sidata.densityj;
-
-	  double rb = 0, rp = 0;
-	  if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
-		  rp = rhoi > 10 ? ri : rj;
-		  rb = rhoi > 10 ? rj : ri;		
-	  } else {
-		  rp = rhoi >= 1 ? ri : rj;
-		  rb = rhoi >= 1 ? rj : ri;		
-	  }
-	  //const double sin_alpha = Ri/rp;
-	  const double hp = sqrt(rp * rp - Ri * Ri);
-	  const double hb = sqrt(rb * rb - Ri * Ri);
+	  if (!sidata.is_wall) { //r is the distance between the sphere's centers
+	      const double r = sidata.r;
+	      const double ri = sidata.radi;
+	      const double rj = sidata.radj;
+	      const double zi = sidata.zi;
+	      const double zj = sidata.zj;
+	      const double deltan = sidata.deltan;
+	      const double delx = sidata.delta[0];
+	      const double delz = sidata.delta[2];
+	      const double dxz = sqrt(delx*delx+delz*delz);
+	      const double Ri = 1/(2*dxz)*sqrt((-dxz+ri-rj)*(-dxz-ri+rj)*(-dxz+ri+rj)*(dxz+ri+rj));
+	      const double rhoi = sidata.densityi;
+	      const double rhoj = sidata.densityj;
 	  
-	  const double sp = 2*M_PI*rp*hp;
-	  const double sb = 2*M_PI*rb*hb;
+	      double rb = 0, rp = 0, zp = 0 ,zb = 0;
+	      if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
+		      rp = rhoi > 10 ? ri : rj;
+		      rb = rhoi > 10 ? rj : ri;
+		      zp = rhoi > 10 ? zi : zj;
+		      zb = rhoi > 10 ? zi : zj;
+	      } else {
+		      rp = rhoi >= 1 ? ri : rj;
+		      rb = rhoi >= 1 ? rj : ri;	
+		      zp = rhoi >= 1 ? zi : zj;
+		      zb = rhoi >= 1 ? zi : zj;
+	      }
+	      const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+	      //const double sin_alpha = Ri/rp;
+	      /*const double hp = sqrt(rp * rp - Ri * Ri);
+	      const double hb = sqrt(rb * rb - Ri * Ri);
+	  
+	      const double sp = 2*M_PI*rp*hp;
+	      const double sb = 2*M_PI*rb*hb;
 
-	  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+	      const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
 
-	  const double wa = surfaceTension*(sb-sp*cos(contactEffAngle));
+	      const double wa = surfaceTension*(sb-sp*cos(contactEffAngle));
 
-	  const double F_ad = -wa/deltan;
-	  if(tangentialReduce_) sidata.Fn += F_ad; 
+	      const double F_ad = -wa/deltan;
+	      if(tangentialReduce_) sidata.Fn += F_ad; */
+	      double Fca = 0,Fp = 0;
+	      const double sinalpha = Ri/rb;
+	      const double cosalpha = (dxz*dxz+rp*rp-rb*rb)/(2*dxz*rp);
+	  
+	      if (capillary_) {
+		      const double sintheta_alpha = sin(contactEffAngle)*cosalpha-cos(contactEffAngle)*sinalpha;
+		      Fca=-2*M_PI*surfaceTension*rp*sinalpha*sintheta_alpha;
+	      }
 
-	  if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
-		
-		const double fx = F_ad * sidata.en[0];
-		const double fy = F_ad * sidata.en[1];
-		const double fz = F_ad * sidata.en[2];
+	      if (pressure_) {
+		      const double POb = sinalpha*rb;
+		      const double ObM = abs(delz);
+		      const double ObN = POb/dxz*ObM;
+		      double H = 0;
+		      if (zp - zb > 0) H = rb-ObN;
+		      if (zp - zb > 0) H = rb+ObN;
+		      Fp = M_PI*rp*rp*sinalpha*sinalpha*(2*surfaceTension/rb-fluidDensity*9.81*H);
+	      }
 
-		i_forces.delta_F[0] += fx;
-		i_forces.delta_F[1] += fy;
-		i_forces.delta_F[2] += fz;
+	      const double fx = (Fca + Fp) * sidata.en[0];
+	      const double fy = (Fca + Fp) * sidata.en[1];
+	      const double fz = (Fca + Fp) * sidata.en[2];
+	      if (tangentialReduce_) sidata.Fn += Fca + Fp;
 
-		j_forces.delta_F[0] -= fx;
-		j_forces.delta_F[1] -= fy;
-		j_forces.delta_F[2] -= fz;
+	      if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
+
+		  i_forces.delta_F[0] += fx;
+		  i_forces.delta_F[1] += fy;
+		  i_forces.delta_F[2] += fz;
+
+		  j_forces.delta_F[0] -= fx;
+		  j_forces.delta_F[1] -= fy;
+		  j_forces.delta_F[2] -= fz;
+	    }
 	}
 
 	inline void endSurfacesIntersect(SurfacesIntersectData &sidata, ForceData&, ForceData&) {}
@@ -250,8 +290,8 @@ namespace ContactModels {
   private:
 	double surfaceTension;
 	double * contactAngle;
-	bool tangentialReduce_;
-	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
+	bool tangentialReduce_,capillary_,pressure_;
+	double fluidViscosity,minSeparationDist, maxSeparationDistRatio,fluidDensity;
   };
 }
 }

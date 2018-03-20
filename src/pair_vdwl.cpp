@@ -107,7 +107,7 @@ void PairVdwl::compute(int eflag, int vflag)
 		jtype = type[j];
 		lowcutij = lowcut[itype][jtype];
 		cutij = cut[itype][jtype];
-		H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+		H = MAX(r-radsum,lowcutij);
 		Hinv = 1.0/H;
 		rinv = 1.0/r;
 		A132ij = A132[itype][jtype];
@@ -323,7 +323,7 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
 	double lowcutij = lowcut[itype][jtype];
 	double r = sqrt(rsq);
 	double term1 = radtimes/radsum;
-	double H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	H = MAX(r-radsum,lowcutij);
 	double Hinv = 1.0/H;
 	double rinv = 1.0/r;
 	/*double b = 3e-17;
@@ -336,4 +336,5 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
 		fpair = V_vdwl*Hinv;
 	fforce = factor_lj*V_vdwl*rinv;
 	return factor_lj*V_vdwl;
+	}
 }

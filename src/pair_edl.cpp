@@ -104,7 +104,8 @@ void PairEdl::compute(int eflag, int vflag)
 			r = sqrt(rsq);
 			cutij = cut[itype][jtype];
 			lowcutij = lowcut[itype][jtype];
-			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+			// H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+			H = MAX(r-radsum,lowcutij);
 			Hinv = 1.0/H;
 			rinv = 1.0/r;
 			term1 = radtimes/radsum;
@@ -353,7 +354,8 @@ double PairEdl::single(int i, int j, int itype,int jtype,
 	cutij = cut[itype][jtype];
 	r = sqrt(rsq);
 	lowcutij = lowcut[itype][jtype];
-	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	// H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	H = MAX(r-radsum,lowcutij);
 	Hinv = 1.0/H;
 	rinv = 1/r;
 	cutij = cut[itype][jtype];

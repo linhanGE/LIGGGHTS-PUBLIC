@@ -103,7 +103,7 @@ void PairHydro::compute(int eflag, int vflag)
 			lowcutij = lowcut[itype] [jtype];
 			cutij = cut[itype][jtype];
 			kij = k[itype][jtype];
-			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;  // lower cut-off distance
+			H = MAX(r-radsum,lowcutij);
 			Hinv = 1.0/H; 
 			term1 = radtimes/radsum;                  // harmonic mean of the radius
 			if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
@@ -330,7 +330,7 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
-	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij; // lower cut-off distance
+	H = MAX(r-radsum,lowcutij);
 	rinv = 1.0/r;
 	cutij = cut[itype][jtype];
 	

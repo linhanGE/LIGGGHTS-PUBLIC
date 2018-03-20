@@ -314,6 +314,8 @@ public:
         sidata.delta[0] = delx;
         sidata.delta[1] = dely;
         sidata.delta[2] = delz;
+        sidata.zi       = x[i][2];
+        sidata.zj       = x[j][2];
         sidata.rsq = rsq;
         sidata.radsum = radsum;
         sidata.contact_flags = contact_flags ? &contact_flags[jj] : NULL;
