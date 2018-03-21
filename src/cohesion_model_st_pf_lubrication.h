@@ -88,7 +88,7 @@ namespace LIGGGHTS {
 namespace ContactModels {
 
   template<>
-  class CohesionModel<COHESION_PB_LUBRICATION> : public CohesionModelBase {
+  class CohesionModel<COHESION_ST_PF_LUBRICATION> : public CohesionModelBase {
   public:
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase * c) :
 		CohesionModelBase(lmp, hsetup, c),
@@ -296,5 +296,5 @@ namespace ContactModels {
 }
 }
 
-#endif // COHESION_MODEL_PB_LUBRICATION_H_
+#endif // COHESION_MODEL_ST_PF_LUBRICATION_H_
 #endif
