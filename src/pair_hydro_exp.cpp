@@ -56,8 +56,8 @@ void PairHydroExp::compute(int eflag, int vflag)
 	int i,j,ii,jj,inum,jnum,itype,jtype;
 	double xtmp,ytmp,ztmp,delx,dely,delz,evdwl;
 	double rsq,force_hydro;
-	double radi,radj,radsum,radtimes,r,factor_lj,rinv, Hinv;
-	double lamdaij,H,H2,kij,lowcutij,cutij; //vh0_ij
+	double radi,radj,radsum,radtimes,r,rinv, Hinv;
+	double lamdaij,H,kij,lowcutij,cutij; //vh0_ij
 	double term1;
 	int *ilist,*jlist,*numneigh,**firstneigh;
 
@@ -353,7 +353,7 @@ double PairHydroExp::single(int i, int j, int itype,int jtype,
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
-	H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
+	H = MAX(r-radsum,lowcutij);
 	double rinv = 1.0/r;
 	//force_hydro =  2*M_PI*term1*lamdaij*vh0_ij*exp(-H/lamdaij);
 	force_hydro =  2*M_PI*term1*lamdaij*k_ij*exp(-H/lamdaij);

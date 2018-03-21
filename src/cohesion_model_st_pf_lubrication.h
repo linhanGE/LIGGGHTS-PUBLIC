@@ -132,7 +132,6 @@ namespace ContactModels {
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
 	  if (!sidata.is_wall) { //r is the distance between the sphere's centers
-	      const double r = sidata.r;
 	      const double ri = sidata.radi;
 	      const double rj = sidata.radj;
 	      const double zi = sidata.zi;

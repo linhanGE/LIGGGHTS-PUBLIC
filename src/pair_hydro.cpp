@@ -109,24 +109,23 @@ void PairHydro::compute(int eflag, int vflag)
 			if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
 				V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
 				fpair = V_hydro/Hinv;
-			}
-			
-			fx = delx*fpair*rinv;
-			fy = dely*fpair*rinv;
-			fz = delz*fpair*rinv;
-			f[i][0] += fx;
-			f[i][1] += fy;
-			f[i][2] += fz;
-			if (newton_pair || j < nlocal) {
-				f[j][0] -= fx;
-				f[j][1] -= fy;
-				f[j][2] -= fz;
-			}
-			// set j = nlocal so that only I gets tallied
-			if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+				fx = delx*fpair*rinv;
+				fy = dely*fpair*rinv;
+				fz = delz*fpair*rinv;
+				f[i][0] += fx;
+				f[i][1] += fy;
+				f[i][2] += fz;
+				if (newton_pair || j < nlocal) {
+					f[j][0] -= fx;
+					f[j][1] -= fy;
+					f[j][2] -= fz;
+				}
+				// set j = nlocal so that only I gets tallied
+				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
 			}
 		}
-		if (vflag_fdotr) virial_fdotr_compute();
+	}
+	if (vflag_fdotr) virial_fdotr_compute();
 }
 
 
@@ -318,7 +317,7 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	double V_hydro;
 	double radsum,radtimes;
 	double r,rinv,H,Hinv,kij,lowcutij,radi,radj;
-	double term1,fpair,cutij;
+	double term1,fpair;
 
 	double *radius = atom->radius;
 
@@ -332,13 +331,8 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	term1 = radtimes/radsum;
 	H = MAX(r-radsum,lowcutij);
 	rinv = 1.0/r;
-	cutij = cut[itype][jtype];
-	
-	if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
-		V_hydro = -term1*kij*Hinv/6;                    // pay attention to the sign
-		fpair = V_hydro/Hinv;
-	}
-	
+	V_hydro = -term1*kij*Hinv/6;                    // pay attention to the sign
+	fpair = V_hydro/Hinv;
 	fforce = factor_lj*V_hydro*rinv;
 	return factor_lj*V_hydro;
 } 
