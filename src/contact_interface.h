@@ -70,10 +70,6 @@ struct SurfacesCloseData {
   double densityi;
   double densityj;
 
-  double nonConDeltan;
-  double nonConrsq;
-  double nonConr;
-
   double area_ratio;
 
   int *contact_flags;

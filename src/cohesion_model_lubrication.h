@@ -94,11 +94,6 @@ namespace ContactModels {
 		
 	}
 
-	void registerSettings(Settings & settings)
-	{
-	  settings.registerOnOff("tangential_reduce",tangentialReduce_,false);
-	}
-	
 	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
 
 	void connectToProperties(PropertyRegistry & registry)
@@ -134,80 +129,52 @@ namespace ContactModels {
 	   if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
 	   scdata.has_force_update = true;
+	   const int i = scdata.i;
+	   const int j = scdata.j;
+	   const int itype = scdata.itype;
+	   const int jtype = scdata.jtype;
+	   const double radi = scdata.radi;
+	   const double radj = scdata.is_wall ? radi : scdata.radj;
+	   const double r = sqrt(scdata.rsq);
+	   const double radsum = scdata.radsum;
+	   const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
+	   const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
+	   const double d = dist > minSeparationDist ? dist : minSeparationDist;
+	   double **v = atom->v;
+	   // calculate vn and vt since not in struct
+	   const double rinv = 1.0 / r;
+	   const double dx = scdata.delta[0];
+	   const double dy = scdata.delta[1];
+	   const double dz = scdata.delta[2];
+	   const double enx = dx * rinv;
+	   const double eny = dy * rinv;
+	   const double enz = dz * rinv;
 
-	   if (!scdata.is_wall) {
+	   // relative translational velocity
+	   const double vr1 = v[i][0] - v[j][0];
+	   const double vr2 = v[i][1] - v[j][1];
+	   const double vr3 = v[i][2] - v[j][2];
 
-		  double **v = atom->v;
-		  const int i = scdata.i;
-		  const int j = scdata.j;
-		  const double rsq = scdata.rsq;
-		  const double r = sqrt(rsq);
-		  const double rinv =  1.0/r;
-		  const double radsum = scdata.radsum;
-		  const double radi = scdata.radi;
-		  const double radj = scdata.radj;
-		  const double rEff = radi*radj / radsum;
-		  double d = r - radsum;
-		  d = d > minSeparationDist ? d : minSeparationDist;
+	   // normal component
+	   const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+
+	   const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			  
-		  const double dx = scdata.delta[0];
-		  const double dy = scdata.delta[1];
-		  const double dz = scdata.delta[2];
-		  const double enx = dx * rinv;
-		  const double eny = dy * rinv;
-		  const double enz = dz * rinv;
-		  // relative translational velocity
-		  const double vr1 = v[i][0] - v[j][0];
-		  const double vr2 = v[i][1] - v[j][1];
-		  const double vr3 = v[i][2] - v[j][2];
-		  const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		  
-		  const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
-			  
-		  const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
-		  const double fy = F_lubrication * eny;				 
-		  const double fz = F_lubrication * enz;				 
+	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
+	   const double fy = F_lubrication * eny;				 
+	   const double fz = F_lubrication * enz;				 
 
-		  i_forces.delta_F[0] += fx;
-		  i_forces.delta_F[1] += fy;
-		  i_forces.delta_F[2] += fz;
+	   i_forces.delta_F[0] += fx;
+	   i_forces.delta_F[1] += fy;
+	   i_forces.delta_F[2] += fz;
 
-		  j_forces.delta_F[0] -= fx;
-		  j_forces.delta_F[1] -= fy;
-		  j_forces.delta_F[2] -= fz;
-	  }
-
-	  if(scdata.is_wall) {
-		
-		double d = scdata.nonConDeltan;                             // deltan is the distance to the wall if scdata.wall = true
-		d = d > minSeparationDist ? d : minSeparationDist;
-		const double rinv =  1.0/scdata.nonConr;
-		const double enx = scdata.delta[0] * rinv;
-		const double eny = scdata.delta[1] * rinv;
-		const double enz = scdata.delta[2] * rinv;
-		const double rEff =  scdata.radi;
-						
-		const double vr1 = scdata.v_i[0]  - scdata.v_j[0];
-		const double vr2 = scdata.v_i[1]  - scdata.v_j[1];
-		const double vr3 = scdata.v_i[2]  - scdata.v_j[2];
-
-		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		
-		const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
-			
-		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
-		const double fy = F_lubrication * eny;				 
-		const double fz = F_lubrication * enz;				 
-			
-		i_forces.delta_F[0] += fx;
-		i_forces.delta_F[1] += fy;
-		i_forces.delta_F[2] += fz;
-	  }
+	   j_forces.delta_F[0] -= fx;
+	   j_forces.delta_F[1] -= fy;
+	   j_forces.delta_F[2] -= fz;
 	}
   
   private:
-	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
-	bool tangentialReduce_;
+	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;	
   };
  }
 }

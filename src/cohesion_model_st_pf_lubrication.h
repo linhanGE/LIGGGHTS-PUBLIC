@@ -132,69 +132,69 @@ namespace ContactModels {
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
 	  if (!sidata.is_wall) { //r is the distance between the sphere's centers
-	      const double ri = sidata.radi;
-	      const double rj = sidata.radj;
-	      const double zi = sidata.zi;
-	      const double zj = sidata.zj;
-	      const double deltan = sidata.deltan;
-	      const double delx = sidata.delta[0];
-	      const double delz = sidata.delta[2];
-	      const double dxz = sqrt(delx*delx+delz*delz);
-	      const double Ri = 1/(2*dxz)*sqrt((-dxz+ri-rj)*(-dxz-ri+rj)*(-dxz+ri+rj)*(dxz+ri+rj));
-	      const double rhoi = sidata.densityi;
-	      const double rhoj = sidata.densityj;
+		  const double ri = sidata.radi;
+		  const double rj = sidata.radj;
+		  const double zi = sidata.zi;
+		  const double zj = sidata.zj;
+		  const double deltan = sidata.deltan;
+		  const double delx = sidata.delta[0];
+		  const double delz = sidata.delta[2];
+		  const double dxz = sqrt(delx*delx+delz*delz);
+		  const double Ri = 1/(2*dxz)*sqrt((-dxz+ri-rj)*(-dxz-ri+rj)*(-dxz+ri+rj)*(dxz+ri+rj));
+		  const double rhoi = sidata.densityi;
+		  const double rhoj = sidata.densityj;
 	  
-	      double rb = 0, rp = 0, zp = 0 ,zb = 0;
-	      if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
-		      rp = rhoi > 10 ? ri : rj;
-		      rb = rhoi > 10 ? rj : ri;
-		      zp = rhoi > 10 ? zi : zj;
-		      zb = rhoi > 10 ? zi : zj;
-	      } else {
-		      rp = rhoi >= 1 ? ri : rj;
-		      rb = rhoi >= 1 ? rj : ri;	
-		      zp = rhoi >= 1 ? zi : zj;
-		      zb = rhoi >= 1 ? zi : zj;
-	      }
-	      const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
-	      //const double sin_alpha = Ri/rp;
-	      /*const double hp = sqrt(rp * rp - Ri * Ri);
-	      const double hb = sqrt(rb * rb - Ri * Ri);
+		  double rb = 0, rp = 0, zp = 0 ,zb = 0;
+		  if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
+			  rp = rhoi > 10 ? ri : rj;
+			  rb = rhoi > 10 ? rj : ri;
+			  zp = rhoi > 10 ? zi : zj;
+			  zb = rhoi > 10 ? zi : zj;
+		  } else {
+			  rp = rhoi >= 1 ? ri : rj;
+			  rb = rhoi >= 1 ? rj : ri;	
+			  zp = rhoi >= 1 ? zi : zj;
+			  zb = rhoi >= 1 ? zi : zj;
+		  }
+		  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+		  //const double sin_alpha = Ri/rp;
+		  /*const double hp = sqrt(rp * rp - Ri * Ri);
+		  const double hb = sqrt(rb * rb - Ri * Ri);
 	  
-	      const double sp = 2*M_PI*rp*hp;
-	      const double sb = 2*M_PI*rb*hb;
+		  const double sp = 2*M_PI*rp*hp;
+		  const double sb = 2*M_PI*rb*hb;
 
-	      const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+		  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
 
-	      const double wa = surfaceTension*(sb-sp*cos(contactEffAngle));
+		  const double wa = surfaceTension*(sb-sp*cos(contactEffAngle));
 
-	      const double F_ad = -wa/deltan;
-	      if(tangentialReduce_) sidata.Fn += F_ad; */
-	      double Fca = 0,Fp = 0;
-	      const double sinalpha = Ri/rb;
-	      const double cosalpha = (dxz*dxz+rp*rp-rb*rb)/(2*dxz*rp);
+		  const double F_ad = -wa/deltan;
+		  if(tangentialReduce_) sidata.Fn += F_ad; */
+		  double Fca = 0,Fp = 0;
+		  const double sinalpha = Ri/rb;
+		  const double cosalpha = (dxz*dxz+rp*rp-rb*rb)/(2*dxz*rp);
 	  
-	      if (capillary_) {
-		      const double sintheta_alpha = sin(contactEffAngle)*cosalpha-cos(contactEffAngle)*sinalpha;
-		      Fca=-2*M_PI*surfaceTension*rp*sinalpha*sintheta_alpha;
-	      }
+		  if (capillary_) {
+			  const double sintheta_alpha = sin(contactEffAngle)*cosalpha-cos(contactEffAngle)*sinalpha;
+			  Fca=-2*M_PI*surfaceTension*rp*sinalpha*sintheta_alpha;
+		  }
 
-	      if (pressure_) {
-		      const double POb = sinalpha*rb;
-		      const double ObM = abs(delz);
-		      const double ObN = POb/dxz*ObM;
-		      double H = 0;
-		      if (zp - zb > 0) H = rb-ObN;
-		      if (zp - zb > 0) H = rb+ObN;
-		      Fp = M_PI*rp*rp*sinalpha*sinalpha*(2*surfaceTension/rb-fluidDensity*9.81*H);
-	      }
+		  if (pressure_) {
+			  const double POb = sinalpha*rb;
+			  const double ObM = abs(delz);
+			  const double ObN = POb/dxz*ObM;
+			  double H = 0;
+			  if (zp - zb > 0) H = rb-ObN;
+			  if (zp - zb > 0) H = rb+ObN;
+			  Fp = M_PI*rp*rp*sinalpha*sinalpha*(2*surfaceTension/rb-fluidDensity*9.81*H);
+		  }
 
-	      const double fx = (Fca + Fp) * sidata.en[0];
-	      const double fy = (Fca + Fp) * sidata.en[1];
-	      const double fz = (Fca + Fp) * sidata.en[2];
-	      if (tangentialReduce_) sidata.Fn += Fca + Fp;
+		  const double fx = (Fca + Fp) * sidata.en[0];
+		  const double fy = (Fca + Fp) * sidata.en[1];
+		  const double fz = (Fca + Fp) * sidata.en[2];
+		  if (tangentialReduce_) sidata.Fn += Fca + Fp;
 
-	      if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
+		  if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
 
 		  i_forces.delta_F[0] += fx;
 		  i_forces.delta_F[1] += fy;
@@ -203,7 +203,7 @@ namespace ContactModels {
 		  j_forces.delta_F[0] -= fx;
 		  j_forces.delta_F[1] -= fy;
 		  j_forces.delta_F[2] -= fz;
-	    }
+		}
 	}
 
 	inline void endSurfacesIntersect(SurfacesIntersectData &sidata, ForceData&, ForceData&) {}
@@ -214,76 +214,51 @@ namespace ContactModels {
 	{
 	   if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
+	   
 	   scdata.has_force_update = true;
 
-	   if (!scdata.is_wall) {
+	   const int i = scdata.i;
+	   const int j = scdata.j;
+	   const int itype = scdata.itype;
+	   const int jtype = scdata.jtype;
+	   const double radi = scdata.radi;
+	   const double radj = scdata.is_wall ? radi : scdata.radj;
+	   const double r = sqrt(scdata.rsq);
+	   const double radsum = scdata.radsum;
+	   const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
+	   const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
+	   const double d = dist > minSeparationDist ? dist : minSeparationDist;
+	   double **v = atom->v;
+	   // calculate vn and vt since not in struct
+	   const double rinv = 1.0 / r;
+	   const double dx = scdata.delta[0];
+	   const double dy = scdata.delta[1];
+	   const double dz = scdata.delta[2];
+	   const double enx = dx * rinv;
+	   const double eny = dy * rinv;
+	   const double enz = dz * rinv;
 
-		  double **v = atom->v;
-		  const int i = scdata.i;
-		  const int j = scdata.j;
-		  const double rsq = scdata.rsq;
-		  const double r = sqrt(rsq);
-		  const double rinv =  1.0/r;
-		  const double radsum = scdata.radsum;
-		  const double radi = scdata.radi;
-		  const double radj = scdata.radj;
-		  const double rEff = radi*radj / radsum;
-		  double d = r - radsum;
-		  d = d > minSeparationDist ? d : minSeparationDist;
+	   // relative translational velocity
+	   const double vr1 = v[i][0] - v[j][0];
+	   const double vr2 = v[i][1] - v[j][1];
+	   const double vr3 = v[i][2] - v[j][2];
+
+	   // normal component
+	   const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+
+	   const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 			  
-		  const double dx = scdata.delta[0];
-		  const double dy = scdata.delta[1];
-		  const double dz = scdata.delta[2];
-		  const double enx = dx * rinv;
-		  const double eny = dy * rinv;
-		  const double enz = dz * rinv;
-		  // relative translational velocity
-		  const double vr1 = v[i][0] - v[j][0];
-		  const double vr2 = v[i][1] - v[j][1];
-		  const double vr3 = v[i][2] - v[j][2];
-		  const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		  
-		  const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
-			  
-		  const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
-		  const double fy = F_lubrication * eny;				 
-		  const double fz = F_lubrication * enz;				 
+	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
+	   const double fy = F_lubrication * eny;				 
+	   const double fz = F_lubrication * enz;				 
 
-		  i_forces.delta_F[0] += fx;
-		  i_forces.delta_F[1] += fy;
-		  i_forces.delta_F[2] += fz;
+	   i_forces.delta_F[0] += fx;
+	   i_forces.delta_F[1] += fy;
+	   i_forces.delta_F[2] += fz;
 
-		  j_forces.delta_F[0] -= fx;
-		  j_forces.delta_F[1] -= fy;
-		  j_forces.delta_F[2] -= fz;
-	  }
-
-	  if(scdata.is_wall) {
-		
-		double d = scdata.nonConDeltan;                             // deltan is the distance to the wall if scdata.wall = true
-		d = d > minSeparationDist ? d : minSeparationDist;
-		const double rinv =  1.0/scdata.nonConr;
-		const double enx = scdata.delta[0] * rinv;
-		const double eny = scdata.delta[1] * rinv;
-		const double enz = scdata.delta[2] * rinv;
-		const double rEff =  scdata.radi;
-						
-		const double vr1 = scdata.v_i[0]  - scdata.v_j[0];
-		const double vr2 = scdata.v_i[1]  - scdata.v_j[1];
-		const double vr3 = scdata.v_i[2]  - scdata.v_j[2];
-
-		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		
-		const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
-			
-		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
-		const double fy = F_lubrication * eny;				 
-		const double fz = F_lubrication * enz;				 
-			
-		i_forces.delta_F[0] += fx;
-		i_forces.delta_F[1] += fy;
-		i_forces.delta_F[2] += fz;
-	  }
+	   j_forces.delta_F[0] -= fx;
+	   j_forces.delta_F[1] -= fy;
+	   j_forces.delta_F[2] -= fz;
 	}
 
   private:
