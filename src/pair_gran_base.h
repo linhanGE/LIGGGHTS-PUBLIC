@@ -194,6 +194,7 @@ public:
     double **x = atom->x;
     double **v = atom->v;
     double **f = atom->f;
+    double *rho = atom->density;
     double **omega = atom->omega;
     double **torque = atom->torque;
     double *radius = atom->radius;
@@ -257,6 +258,7 @@ public:
       const double xtmp = x[i][0];
       const double ytmp = x[i][1];
       const double ztmp = x[i][2];
+      const double densityi = rho[i];
       double radi = radius[i];
       int * const contact_flags = first_contact_flag ? first_contact_flag[i] : NULL;
       double * const all_contact_hist = first_contact_hist ? first_contact_hist[i] : NULL;
@@ -271,6 +273,7 @@ public:
             sidata.radi = radi;
       #else
           sidata.radi = radi;
+          sidata.densityi = densityi;
       #endif
 
       for (int jj = 0; jj < jnum; jj++) {
@@ -279,6 +282,7 @@ public:
         const double delx = xtmp - x[j][0];
         const double dely = ytmp - x[j][1];
         const double delz = ztmp - x[j][2];
+        const double densityi = rho[i];
         const double rsq = delx * delx + dely * dely + delz * delz;
         double radj = radius[j];
 
@@ -317,6 +321,7 @@ public:
         sidata.zi       = x[i][2];
         sidata.zj       = x[j][2];
         sidata.rsq = rsq;
+        sidata.densityj = rho[j];
         sidata.radsum = radsum;
         sidata.contact_flags = contact_flags ? &contact_flags[jj] : NULL;
         sidata.contact_history = all_contact_hist ? &all_contact_hist[dnum*jj] : NULL;

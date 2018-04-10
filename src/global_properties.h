@@ -90,7 +90,6 @@ namespace MODEL_PARAMS
     MatrixProperty* createCoeffRestMax(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     MatrixProperty* createCoeffStc(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     ScalarProperty* createRollingStiffness(PropertyRegistry & registry, const char * caller, bool sanity_checks);
-
     ScalarProperty* createLiquidVolume(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     ScalarProperty* createLiquidDensity(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     ScalarProperty* createSurfaceTension(PropertyRegistry & registry, const char * caller, bool sanity_checks);
@@ -99,6 +98,8 @@ namespace MODEL_PARAMS
     VectorProperty* createContactAngle(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     MatrixProperty* createKn(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     MatrixProperty* createKt(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+    MatrixProperty* createEdry(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+
     MatrixProperty* createGamman(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     MatrixProperty* createGammat(PropertyRegistry & registry, const char * caller, bool sanity_checks);
     MatrixProperty* createGammanAbs(PropertyRegistry & registry, const char * caller, bool sanity_checks);

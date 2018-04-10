@@ -765,6 +765,13 @@ namespace MODEL_PARAMS
 
   /* ---------------------------------------------------------------------- */
 
+  MatrixProperty* createEdry(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "edry", caller);
+  }
+
+  /* ---------------------------------------------------------------------- */
+
   MatrixProperty* createGamman(PropertyRegistry & registry, const char * caller, bool)
   {
     LAMMPS * lmp = registry.getLAMMPS();
