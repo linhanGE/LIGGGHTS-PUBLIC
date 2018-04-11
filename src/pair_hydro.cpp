@@ -331,9 +331,10 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	term1 = radtimes/radsum;
 	H = MAX(r-radsum,lowcutij);
 	rinv = 1.0/r;
+	Hinv = 1/H;
 	V_hydro = -term1*kij*Hinv/6;                    // pay attention to the sign
 	fpair = V_hydro/Hinv;
-	fforce = factor_lj*V_hydro*rinv;
-	return factor_lj*V_hydro;
+	fforce = factor_lj*fpair*rinv;
+	return factor_lj*fpair;
 } 
 

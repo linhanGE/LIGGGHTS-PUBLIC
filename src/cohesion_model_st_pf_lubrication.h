@@ -136,7 +136,6 @@ namespace ContactModels {
 		  const double rj = sidata.radj;
 		  const double zi = sidata.zi;
 		  const double zj = sidata.zj;
-		  const double deltan = sidata.deltan;
 		  const double delx = sidata.delta[0];
 		  const double delz = sidata.delta[2];
 		  const double dxz = sqrt(delx*delx+delz*delz);

@@ -42,7 +42,7 @@
 ------------------------------------------------------------------------- */
 
 #ifdef NORMAL_MODEL
-NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,1)
+NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,7)
 #else
 #ifndef NORMAL_MODEL_MYHOOKE_STIFFNESS_H_
 #define NORMAL_MODEL_MYHOOKE_STIFFNESS_H_
@@ -87,12 +87,10 @@ namespace ContactModels
 	  NormalModelBase(lmp, hsetup, c),
 	  k_n(NULL),
 	  k_t(NULL),
-	  // gamma_n(NULL),
-	  // gamma_t(NULL),
+	  gamma_t(NULL),
 	  e_dry(NULL),
 	  eta_e(NULL),
 	  tangential_damping(false),
-	  // absolute_damping(false),
 	  limitForce(false),
 	  displayedSettings(false),
 	  history_offset(0),
@@ -110,9 +108,8 @@ namespace ContactModels
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-	  settings.registerOnOff("absolute_damping", absolute_damping);
-      settings.registerOnOff("lubrication_effect", lubrication_effect);
-	  settings.registerOnOff("limitForce", limitForce);
+      settings.registerOnOff("wallOnly", tangential_damping, false);
+      settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
 	}
@@ -162,27 +159,22 @@ namespace ContactModels
 	  registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("eta_e", &MODEL_PARAMS::createEta_eMHS);
 	  registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityMHS);
-	  registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatioMHS); // this should be set as the eta_e/R for particle-particle, eta_e/R+1 for particle-wall
 	  registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityMHS);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("eta_e", eta_e,"model myhooke/stiffness");
-	  registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"model myhooke/stiffness");
 	  registry.connect("fluidViscosity", fluidViscosity,"model myhooke/stiffness");
 	  registry.connect("fluidDensity", fluidDensity,"model myhooke/stiffness");
 
-
-	  neighbor->register_contact_dist_factor(maxSeparationDistRatio);     // x times radius, here represents a suitable value before collision, 1%?
-	  if(maxSeparationDistRatio < 1.0)
-		error->one(FLERR,"\n\ncohesion model myhooke_stiffness requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
-
-	  registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
+      registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
 	  registry.connect("gammat", gamma_t,"model myhooke/stiffness");
 
 	  // error checks on coarsegraining
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
+
+      neighbor->register_contact_dist_factor(1.05);
 
 	  // enlarge contact distance flag in case of elastic energy computation
 	  // to ensure that surfaceClose is called after a contact
@@ -267,36 +259,37 @@ namespace ContactModels
 	  // convert Kn and Kt from pressure units to force/distance^2
 	  kn /= force->nktv2p;
 	  kt /= force->nktv2p;
-
-      double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
-	  const double  impactVn = impactVelocity[0];
-
-
-	  const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/fluidDensity;
-	  const double stc = log(radi/eta_e);
-      double e_wet = 0;
-      if (st < stc) {
-          e_wet = 0;
-          gamman = 2*sqrt(meff*kn);
-      } // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
-      else {
-          e_wet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
-          gamman = 2*log(e_wet)*sqrt(meff*kn)/sqrt(log(e_wet)*log(e_wet) + M_PI*M_PI);
+      
+      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
+      if (sidata.is_wall){
+          double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
+	      const double  impactVn = impactVelocity[0];
+          const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/fluidDensity;
+	      const double stc = log(radi/eta_e);
+          double ewet = 0;
+          if (st < stc) {
+              gamman = 2*sqrt(meff*kn);
+          } 
+          else {
+              ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
+              gamman = 2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
+          }
+      } else {
+          if (wallOnly) gamman = 2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);
       }
-
-	  const double Fn_damping = -gamman*sidata.vn;    
+      
+      const double Fn_damping = -gamman*sidata.vn;    
 	  const double Fn_contact = kn*sidata.deltan;
-	  double Fn = Fn_damping + Fn_contact;
+      double Fn = Fn_damping + Fn_contact;
 
-	  //limit force to avoid the artefact of negative repulsion force
-	  if(limitForce && (Fn<0.0) )
+      //limit force to avoid the artefact of negative repulsion force
+
+      if(limitForce && (Fn<0.0) )
 	  {
 		  Fn = 0.0;
 	  }
 
-	  sidata.Fn = Fn;
-
-	  sidata.kn = kn;
+      sidata.kn = kn;
 	  sidata.kt = kt;
 	  sidata.gamman = gamman;
 	  sidata.gammat = gammat;
@@ -429,10 +422,7 @@ namespace ContactModels
 
 		// normal component
 		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-        
 		impactVelocity[0] = vn;
-		/*double * const contflag = &scdata.contact_history[history_offset];
-		if (vn <= 0) contflag[0] = 1.0;// make sure particles moving towards each other*/
 	}
 
 	void beginPass(SurfacesIntersectData&, ForceData&, ForceData&){}
@@ -441,13 +431,11 @@ namespace ContactModels
   protected:
 	double ** k_n;
 	double ** k_t;
-	double ** gamma_n;
 	double ** gamma_t;
     double ** e_dry;
 
 	bool tangential_damping;
-	bool absolute_damping;
-	bool limitForce;
+	bool limitForce,wallOnly;
 	bool displayedSettings;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
