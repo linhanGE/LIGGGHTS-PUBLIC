@@ -6,3 +6,4 @@
 *.vcxproj
 *.filters
 /lib/vtk
+desktop.ini
