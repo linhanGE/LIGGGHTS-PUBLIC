@@ -321,7 +321,7 @@ public:
         sidata.zi       = x[i][2];
         sidata.zj       = x[j][2];
         sidata.rsq = rsq;
-        sidata.densityj = rho[j];
+        sidata.densityj = densityj;
         sidata.radsum = radsum;
         sidata.contact_flags = contact_flags ? &contact_flags[jj] : NULL;
         sidata.contact_history = all_contact_hist ? &all_contact_hist[dnum*jj] : NULL;

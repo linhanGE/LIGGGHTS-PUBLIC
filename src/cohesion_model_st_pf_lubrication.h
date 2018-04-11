@@ -218,8 +218,6 @@ namespace ContactModels {
 
 	   const int i = scdata.i;
 	   const int j = scdata.j;
-	   const int itype = scdata.itype;
-	   const int jtype = scdata.jtype;
 	   const double radi = scdata.radi;
 	   const double radj = scdata.is_wall ? radi : scdata.radj;
 	   const double r = sqrt(scdata.rsq);
