@@ -271,12 +271,12 @@ namespace ContactModels
          gamman = 2*sqrt(meff*kn);
       } else {
          ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
-         gamman = 2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
+         gamman = -2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
       }
 
       // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
       if (!sidata.is_wall && wallOnly){
-          gamman = 2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
+          gamman = -2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
       } 
 
       const double Fn_damping = -gamman*sidata.vn;    

@@ -48,6 +48,7 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #define NORMAL_MODEL_HOOKE_STIFFNESS_H_
 #include "contact_models.h"
 #include "normal_model_base.h"
+#include <stdio.h>
 
 namespace LIGGGHTS {
 namespace ContactModels
@@ -223,6 +224,8 @@ namespace ContactModels
         gamman = meff*gamma_n[itype][jtype];
         gammat = meff*gamma_t[itype][jtype];
       }
+
+      printf ("Damping coefficient = %8.6f \n", gamman);
 
       if (!tangential_damping) gammat = 0.0;
 
