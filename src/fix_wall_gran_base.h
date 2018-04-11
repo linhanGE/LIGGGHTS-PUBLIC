@@ -178,7 +178,7 @@ public:
     sidata.v_j = vwall;
     sidata.omega_i = omega;
 
-    if (deltan<=0) sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
+    if (sidata.deltan<=0) sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
     else sidata.r = sidata.radi + sidata.deltan;
     sidata.rsq = sidata.r*sidata.r;
     const double rinv = 1.0/sidata.r;

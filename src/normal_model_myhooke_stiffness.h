@@ -89,9 +89,12 @@ namespace ContactModels
 	  k_t(NULL),
 	  gamma_t(NULL),
 	  e_dry(NULL),
-	  eta_e(NULL),
+	  eta_e(0),
+      fluidViscosity(0),
+      fluidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
+      wallOnly(false),
 	  displayedSettings(false),
 	  history_offset(0),
 	  impact_velocity(0),
@@ -226,14 +229,11 @@ namespace ContactModels
 	{
 	  if (sidata.contact_flags) *sidata.contact_flags |= CONTACT_NORMAL_MODEL;
 	  
+      const bool update_history = sidata.computeflag && sidata.shearupdate;
 	  const int itype = sidata.itype;
 	  const int jtype = sidata.jtype;
-      const int i = sidata.i;
-	  const int j = sidata.j;
 	  const double rhoi = sidata.densityi;
-	  const double rhoj = sidata.densityj;
 	  const double radi = sidata.radi;
-      const double r = sqrt(sidata.rsq);
       double meff=sidata.meff;
 
       double kn = k_n[itype][jtype];
@@ -402,8 +402,6 @@ namespace ContactModels
 		const int i = scdata.i;
 		const int j = scdata.j;
 		const double r = sqrt(scdata.rsq);
-        const double radi = scdata.radi;
-	    const double radj = scdata.is_wall ? radi : scdata.radj;
         			
 		double **v = atom->v;
 		// calculate vn and vt since not in struct
@@ -433,17 +431,16 @@ namespace ContactModels
 	double ** k_t;
 	double ** gamma_t;
     double ** e_dry;
+    double eta_e,fluidViscosity,fluidDensity;
 
-	bool tangential_damping;
-	bool limitForce,wallOnly;
+	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
+    int history_offset,impact_velocity;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
 	FixPropertyAtom *fix_dissipated_;
 	bool dissipatedflag_;
 	int dissipation_history_offset_;
-	int history_offset,impact_velocity;
-	double eta_e,fluidViscosity,fluidDensity;
   };
 }
 }

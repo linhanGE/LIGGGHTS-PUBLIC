@@ -282,7 +282,7 @@ public:
         const double delx = xtmp - x[j][0];
         const double dely = ytmp - x[j][1];
         const double delz = ztmp - x[j][2];
-        const double densityi = rho[i];
+        const double densityj = rho[j];
         const double rsq = delx * delx + dely * dely + delz * delz;
         double radj = radius[j];
 

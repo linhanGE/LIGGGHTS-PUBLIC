@@ -328,7 +328,6 @@ double PairVdwl::single(int i, int j, int itype, int jtype, double rsq,
 	double l = 3.3e15;
 	double c = 3e8;*/
 	double V_vdwl = -A132ij/6*Hinv*term1;
-	double fpair = V_vdwl*Hinv;
 	fforce = factor_lj*V_vdwl*rinv;
 	return factor_lj*V_vdwl;
 }

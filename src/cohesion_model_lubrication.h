@@ -94,8 +94,9 @@ namespace ContactModels {
 		
 	}
 
-	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
-
+	inline void registerSettings(Settings& settings) {}
+    inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
+    
 	void connectToProperties(PropertyRegistry & registry)
 	{
 		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosity);
@@ -129,10 +130,6 @@ namespace ContactModels {
 	   if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
 	   scdata.has_force_update = true;
-	   const int i = scdata.i;
-	   const int j = scdata.j;
-	   const int itype = scdata.itype;
-	   const int jtype = scdata.jtype;
 	   const double radi = scdata.radi;
 	   const double radj = scdata.is_wall ? radi : scdata.radj;
 	   const double r = sqrt(scdata.rsq);
