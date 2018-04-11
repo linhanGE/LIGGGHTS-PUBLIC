@@ -111,7 +111,7 @@ namespace ContactModels
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-      settings.registerOnOff("wallOnly", tangential_damping, false);
+      settings.registerOnOff("wallOnly", tangential_damping, true);
       settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -260,11 +260,12 @@ namespace ContactModels
 	  kn /= force->nktv2p;
 	  kt /= force->nktv2p;
       
+      double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
+	  const double  impactVn = impactVelocity[0];
+
       // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
       if (sidata.is_wall){
-          double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
-	      const double  impactVn = impactVelocity[0];
-          const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/fluidDensity;
+          const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/9/fluidViscosity;
 	      const double stc = log(radi/eta_e);
           double ewet = 0;
           if (st < stc) {
