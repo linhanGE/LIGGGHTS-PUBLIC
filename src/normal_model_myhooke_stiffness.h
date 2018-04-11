@@ -263,22 +263,22 @@ namespace ContactModels
       double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
 	  const double  impactVn = impactVelocity[0];
 
-      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
-      if (sidata.is_wall){
-          const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/9/fluidViscosity;
-	      const double stc = log(radi/eta_e);
-          double ewet = 0;
-          if (st < stc) {
-              gamman = 2*sqrt(meff*kn);
-          } 
-          else {
-              ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
-              gamman = 2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
-          }
+      const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/9/fluidViscosity;
+	  const double stc = log(radi/eta_e);
+      double ewet = 0;
+
+      if (st < stc) {
+         gamman = 2*sqrt(meff*kn);
       } else {
-          if (wallOnly) gamman = 2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);
+         ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
+         gamman = 2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
       }
-      
+
+      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
+      if (!sidata.is_wall && wallOnly){
+          gamman = 2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
+      } 
+
       const double Fn_damping = -gamman*sidata.vn;    
 	  const double Fn_contact = kn*sidata.deltan;
       double Fn = Fn_damping + Fn_contact;
