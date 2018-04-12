@@ -48,7 +48,6 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #define NORMAL_MODEL_HOOKE_STIFFNESS_H_
 #include "contact_models.h"
 #include "normal_model_base.h"
-#include <stdio.h>
 
 namespace LIGGGHTS {
 namespace ContactModels
@@ -61,8 +60,9 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
-      gamma_n(NULL),
-      gamma_t(NULL),
+      /*gamma_n(NULL),
+      gamma_t(NULL),*/
+      betaeff(NULL),
       tangential_damping(false),
       absolute_damping(false),
       limitForce(false),
@@ -126,11 +126,13 @@ namespace ContactModels
     void connectToProperties(PropertyRegistry & registry) {
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
+      registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff,"model hooke/stiffness");
 
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
+      registry.connect("betaeff", betaeff,"model hooke/stiffness");
 
-      if(absolute_damping) {
+      /*if(absolute_damping) {
         registry.registerProperty("gamman_abs", &MODEL_PARAMS::createGammanAbs);
         registry.registerProperty("gammat_abs", &MODEL_PARAMS::createGammatAbs);
         registry.connect("gamman_abs", gamma_n,"model hooke/stiffness");
@@ -140,7 +142,7 @@ namespace ContactModels
         registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
         registry.connect("gamman", gamma_n,"model hooke/stiffness");
         registry.connect("gammat", gamma_t,"model hooke/stiffness");
-      }
+      }*/
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -214,7 +216,8 @@ namespace ContactModels
             if(0 == comm->me) fprintf(screen," NormalModel<HOOKE_STIFFNESS>: will limit normal force.\n");
         */
       }
-      if(absolute_damping)
+      
+      /*if(absolute_damping)
       {
         gamman = gamma_n[itype][jtype];
         gammat = gamma_t[itype][jtype];
@@ -223,15 +226,16 @@ namespace ContactModels
       {
         gamman = meff*gamma_n[itype][jtype];
         gammat = meff*gamma_t[itype][jtype];
-      }
-
-      printf ("Damping coefficient = %8.6f \n", gamman);
+      }*/
 
       if (!tangential_damping) gammat = 0.0;
 
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
       kt /= force->nktv2p;
+
+      gamman = -2*betaeff[itype][jtype]*sqrt(meff*kn);
+      gammat = gamman;
 
       const double Fn_damping = -gamman*sidata.vn;    
       const double Fn_contact = kn*sidata.deltan;
@@ -380,8 +384,9 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
-    double ** gamma_n;
-    double ** gamma_t;
+    //double ** gamma_n;
+    //double ** gamma_t;
+    double ** betaeff;
 
     bool tangential_damping;
     bool absolute_damping;
