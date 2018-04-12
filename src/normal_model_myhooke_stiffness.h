@@ -49,6 +49,7 @@ NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,7)
 #include "contact_models.h"
 #include "normal_model_base.h"
 #include <cmath>
+#include "math_extra_liggghts.h"
 
 namespace MODEL_PARAMS {
 
@@ -90,7 +91,7 @@ namespace ContactModels
       wallOnly(false),
 	  displayedSettings(false),
 	  history_offset(0),
-	  impact_velocity(0),
+	  velocity_offset(0),
 	  elastic_potential_offset_(0),
 	  elasticpotflag_(false),
 	  fix_dissipated_(NULL),
@@ -98,7 +99,8 @@ namespace ContactModels
 	  dissipation_history_offset_(0)
 	{
 	  history_offset = hsetup->add_history_value("contflag", "0");
-	  impact_velocity = hsetup->add_history_value("impactVelocity", "1");
+	  velocity_offset = hsetup->add_history_value("impactV", "1");
+	  c->add_history_offset("impact_velocity", velocity_offset);
 	}
 
 	void registerSettings(Settings & settings)
@@ -167,7 +169,7 @@ namespace ContactModels
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
 
-      neighbor->register_contact_dist_factor(1.05);
+      neighbor->register_contact_dist_factor(1.01);
 
 	  // enlarge contact distance flag in case of elastic energy computation
 	  // to ensure that surfaceClose is called after a contact
@@ -241,9 +243,6 @@ namespace ContactModels
 		*/
 	  }
 
-
-
-
 	  if (!tangential_damping) gammat = 0.0;
 
 	  // convert Kn and Kt from pressure units to force/distance^2
@@ -251,15 +250,15 @@ namespace ContactModels
 	  kt /= force->nktv2p;
       
       // get impact velocity
-      double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
-	  const double  impactVn = abs(impactVelocity[0]);
+      double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
+	  const double  impactVn = fabs(impactVelocity[0]);
 
       // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
-      const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/9/fluidViscosity;
+      const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/(9*fluidViscosity);
 	  const double stc = log(radi/eta_e);
       double ewet = 0;
 
-      if (st < stc) {
+      if (st <= stc) {
          gamman = 2*sqrt(meff*kn);
       } else {
          ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
@@ -390,9 +389,9 @@ namespace ContactModels
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
-		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_TANGENTIAL_MODEL;
+		if (scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
 		
-		double * const impactVelocity = &scdata.contact_history[impact_velocity]; 
+		double * const impactVelocity = &scdata.contact_history[velocity_offset]; 
 		const int i = scdata.i;
 		const int j = scdata.j;
 		const double r = sqrt(scdata.rsq);
@@ -428,7 +427,7 @@ namespace ContactModels
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
-    int history_offset,impact_velocity;
+    int history_offset,velocity_offset;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
 	FixPropertyAtom *fix_dissipated_;

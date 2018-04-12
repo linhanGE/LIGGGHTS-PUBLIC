@@ -154,6 +154,7 @@ public:
     double *torque = atom->torque[ip];
     double *v = atom->v[ip];
     double *omega = atom->omega[ip];
+    double rhoi = atom->density[ip];
     double mass = atom->rmass[ip];
     int *type = atom->type;
 
@@ -177,6 +178,7 @@ public:
     sidata.v_i = v;
     sidata.v_j = vwall;
     sidata.omega_i = omega;
+    sidata.densityi = rhoi;
 
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
     sidata.rsq = sidata.r*sidata.r;
