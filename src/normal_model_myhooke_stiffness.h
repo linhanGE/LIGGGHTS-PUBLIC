@@ -52,12 +52,6 @@ NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,7)
 
 namespace MODEL_PARAMS {
 
-	inline static ScalarProperty* createMaxSeparationDistRatioMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks) // MHS means my hooke stiffness
-	{
-	  ScalarProperty* maxSeparationDistRatioScalar = MODEL_PARAMS::createScalarProperty(registry, "maxSeparationDistRatio", caller);
-	  return maxSeparationDistRatioScalar;
-	}   
-
 	inline static ScalarProperty* createFluidViscosityMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* fluidViscosityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidViscosity", caller);
@@ -256,9 +250,11 @@ namespace ContactModels
 	  kn /= force->nktv2p;
 	  kt /= force->nktv2p;
       
+      // get impact velocity
       double * const impactVelocity = &sidata.contact_history[impact_velocity]; 
-	  const double  impactVn = impactVelocity[0];
+	  const double  impactVn = abs(impactVelocity[0]);
 
+      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
       const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/9/fluidViscosity;
 	  const double stc = log(radi/eta_e);
       double ewet = 0;
@@ -270,7 +266,7 @@ namespace ContactModels
          gamman = -2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
       }
 
-      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
+
       if (!sidata.is_wall && wallOnly){
           gamman = -2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
       } 
@@ -394,7 +390,7 @@ namespace ContactModels
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
-		if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
+		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_TANGENTIAL_MODEL;
 		
 		double * const impactVelocity = &scdata.contact_history[impact_velocity]; 
 		const int i = scdata.i;
@@ -427,7 +423,6 @@ namespace ContactModels
   protected:
 	double ** k_n;
 	double ** k_t;
-	double ** gamma_t;
     double ** e_dry;
     double eta_e,fluidViscosity,fluidDensity;
 
