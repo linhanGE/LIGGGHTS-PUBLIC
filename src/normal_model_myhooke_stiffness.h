@@ -87,7 +87,6 @@ namespace ContactModels
 	  NormalModelBase(lmp, hsetup, c),
 	  k_n(NULL),
 	  k_t(NULL),
-	  gamma_t(NULL),
 	  e_dry(NULL),
 	  eta_e(0),
       fluidViscosity(0),
@@ -159,7 +158,7 @@ namespace ContactModels
 	void connectToProperties(PropertyRegistry & registry) {
 	  registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
-	  registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
+      registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("eta_e", &MODEL_PARAMS::createEta_eMHS);
 	  registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityMHS);
 	  registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityMHS);
@@ -170,10 +169,7 @@ namespace ContactModels
 	  registry.connect("fluidViscosity", fluidViscosity,"model myhooke/stiffness");
 	  registry.connect("fluidDensity", fluidDensity,"model myhooke/stiffness");
 
-      registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
-	  registry.connect("gammat", gamma_t,"model myhooke/stiffness");
-
-	  // error checks on coarsegraining
+      // error checks on coarsegraining
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
 
@@ -251,7 +247,7 @@ namespace ContactModels
 		*/
 	  }
 
-	  gammat = gamma_t[itype][jtype];
+
 
 
 	  if (!tangential_damping) gammat = 0.0;
@@ -279,6 +275,7 @@ namespace ContactModels
           gamman = -2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
       } 
 
+      gammat = gamman;
       const double Fn_damping = -gamman*sidata.vn;    
 	  const double Fn_contact = kn*sidata.deltan;
       double Fn = Fn_damping + Fn_contact;
