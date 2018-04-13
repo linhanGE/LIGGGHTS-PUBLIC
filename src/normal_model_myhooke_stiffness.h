@@ -53,12 +53,7 @@ NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,7)
 
 namespace MODEL_PARAMS {
 
-	inline static ScalarProperty* createFluidDensityMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* fluidDensityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidDensity", caller);
-	  return fluidDensityScalar;
-	}
-		inline static ScalarProperty* createStcMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createStcMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* stc_Scalar = MODEL_PARAMS::createScalarProperty(registry, "stc", caller);
 	  return stc_Scalar;
@@ -79,7 +74,7 @@ namespace ContactModels
 	  e_dry(NULL),
       coeffMu(NULL),
 	  stc(0),
-      fluidDensity(0),
+      liquidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
       wallOnly(false),
@@ -151,13 +146,13 @@ namespace ContactModels
       registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
 	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
-	  registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityMHS);
+	  registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
 	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
-	  registry.connect("fluidDensity", fluidDensity,"model myhooke/stiffness");
+	  registry.connect("liquidDensity", liquidDensity,"model myhooke/stiffness");
 
       // error checks on coarsegraining
 	  if(force->cg_active())
@@ -248,7 +243,7 @@ namespace ContactModels
       Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. 
       Journal of Fluid Mechanics 747, 422-446.*/
 
-      const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/(9*fluidViscosity);
+      const double st = (rhoi +  0.5*liquidDensity)*impactVn*2*radi/(9*fluidViscosity);
 
       if (st <= stc) {
          gamman = 2*sqrt(meff*kn);
@@ -414,7 +409,7 @@ namespace ContactModels
 
   protected:
 	double ** k_n, ** k_t, ** e_dry, **coeffMu;
-    double stc,fluidViscosity,fluidDensity;
+    double stc,fluidViscosity,liquidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
