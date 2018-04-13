@@ -73,13 +73,13 @@ namespace ContactModels
 	  k_t(NULL),
 	  e_dry(NULL),
       coeffMu(NULL),
+      gamma_t(NULL),
 	  stc(0),
       liquidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
       wallOnly(false),
 	  displayedSettings(false),
-	  history_offset(0),
 	  velocity_offset(0),
 	  elastic_potential_offset_(0),
 	  elasticpotflag_(false),
@@ -87,7 +87,6 @@ namespace ContactModels
 	  dissipatedflag_(false),
 	  dissipation_history_offset_(0)
 	{
-	  history_offset = hsetup->add_history_value("contflag", "0");
 	  velocity_offset = hsetup->add_history_value("impactV", "1");
 	  c->add_history_offset("impact_velocity", velocity_offset);
 	}
@@ -147,12 +146,14 @@ namespace ContactModels
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
 	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 	  registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
+      registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
 	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
 	  registry.connect("liquidDensity", liquidDensity,"model myhooke/stiffness");
+      registry.connect("gammat", gamma_t,"model myhooke/stiffness");
 
       // error checks on coarsegraining
 	  if(force->cg_active())
@@ -222,13 +223,14 @@ namespace ContactModels
       const double edry = e_dry[itype][jtype];
       const double fluidViscosity = coeffMu[itype][jtype];
 
-	  double gamman, gammat;
+	  double gamman,gammat;
 	  
 	  if(!displayedSettings)
 	  {
 		displayedSettings = true;
 	  }
 
+      gammat = gamma_t[itype][jtype];
 	  if (!tangential_damping) gammat = 0.0;
 
 	  // convert Kn and Kt from pressure units to force/distance^2
@@ -252,12 +254,9 @@ namespace ContactModels
          gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
       }
 
-
       if (!sidata.is_wall && wallOnly){
           gamman = sqrt(4.*meff*kn*log(edry)*log(edry)/(log(edry)*log(edry)+M_PI*M_PI));          
       } 
-
-      gammat = gamman;
 
       const double Fn_damping = -gamman*sidata.vn;    
 	  const double Fn_contact = kn*sidata.deltan;
@@ -408,12 +407,12 @@ namespace ContactModels
 	void endPass(SurfacesIntersectData&, ForceData&, ForceData&){}
 
   protected:
-	double ** k_n, ** k_t, ** e_dry, **coeffMu;
+	double ** k_n, ** k_t, ** e_dry, **coeffMu,** gamma_t;
     double stc,fluidViscosity,liquidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
-    int history_offset,velocity_offset;
+    int velocity_offset;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
 	FixPropertyAtom *fix_dissipated_;
