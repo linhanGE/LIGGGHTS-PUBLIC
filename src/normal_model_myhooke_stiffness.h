@@ -53,12 +53,6 @@ NORMAL_MODEL(MYHOOKE_STIFFNESS,myhooke/stiffness,7)
 
 namespace MODEL_PARAMS {
 
-	inline static ScalarProperty* createFluidViscosityMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* fluidViscosityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidViscosity", caller);
-	  return fluidViscosityScalar;
-	}
-
 	inline static ScalarProperty* createFluidDensityMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* fluidDensityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidDensity", caller);
@@ -83,8 +77,8 @@ namespace ContactModels
 	  k_n(NULL),
 	  k_t(NULL),
 	  e_dry(NULL),
+      coeffMu(NULL),
 	  stc(0),
-      fluidViscosity(0),
       fluidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
@@ -156,13 +150,13 @@ namespace ContactModels
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
       registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
-	  registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityMHS);
+	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 	  registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityMHS);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
-	  registry.connect("fluidViscosity", fluidViscosity,"model myhooke/stiffness");
+	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
 	  registry.connect("fluidDensity", fluidDensity,"model myhooke/stiffness");
 
       // error checks on coarsegraining
@@ -231,6 +225,8 @@ namespace ContactModels
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
       const double edry = e_dry[itype][jtype];
+      const double fluidViscosity = coeffMu[itype][jtype];
+
 	  double gamman, gammat;
 	  
 	  if(!displayedSettings)
@@ -417,9 +413,7 @@ namespace ContactModels
 	void endPass(SurfacesIntersectData&, ForceData&, ForceData&){}
 
   protected:
-	double ** k_n;
-	double ** k_t;
-    double ** e_dry;
+	double ** k_n, ** k_t, ** e_dry, **coeffMu;
     double stc,fluidViscosity,fluidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;

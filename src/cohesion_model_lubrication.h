@@ -59,11 +59,6 @@ COHESION_MODEL(COHESION_LUBRICATION,lubrication,4)
 
 namespace MODEL_PARAMS
 {
-	inline static ScalarProperty* createFluidViscosity(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* fluidViscosityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidViscosity", caller);
-	  return fluidViscosityScalar;
-	}
 	
 	inline static ScalarProperty* createMinSeparationDist(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
@@ -89,20 +84,28 @@ namespace ContactModels {
 	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), minSeparationDist(0.),maxSeparationDistRatio(0.)
+	  CohesionModelBase(lmp, hsetup, cmb), 
+      coeffMu(NULL),
+      fluidViscosity(0.),
+      minSeparationDist(0.),
+      maxSeparationDistRatio(0.),
+      particleOnly(true)
 	{
 		
 	}
 
-	inline void registerSettings(Settings& settings) {}
+	inline void registerSettings(Settings& settings) 
+    {
+        settings.registerOnOff("particleOnly", particleOnly, true);
+    }
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
     
 	void connectToProperties(PropertyRegistry & registry)
 	{
-		registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosity);
+		registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDist);
 		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatio);
-		registry.connect("fluidViscosity", fluidViscosity,"cohesion_model lubrication");
+		registry.connect("coeffMu", coeffMu,"cohesion_model lubrication");
 		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model lubrication");
 		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model lubrication");
 
@@ -132,6 +135,8 @@ namespace ContactModels {
 	   scdata.has_force_update = true;
        const int i = scdata.i;
 	   const int j = scdata.j;
+       const int itype = scdata.itype;
+       const int jtype = scdata.jtype;
 	   const double radi = scdata.radi;
 	   const double radj = scdata.is_wall ? radi : scdata.radj;
 	   const double r = sqrt(scdata.rsq);
@@ -139,6 +144,9 @@ namespace ContactModels {
 	   const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
 	   const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
 	   const double d = dist > minSeparationDist ? dist : minSeparationDist;
+
+       const double fluidViscosity = coeffMu[itype][jtype];
+
 	   double **v = atom->v;
 	   // calculate vn and vt since not in struct
 	   const double rinv = 1.0 / r;
@@ -157,7 +165,9 @@ namespace ContactModels {
 	   // normal component
 	   const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 
-	   const double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
+	   double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
+
+       if (scdata.is_wall && particleOnly) F_lubrication = 0;
 			  
 	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
 	   const double fy = F_lubrication * eny;				 
@@ -166,14 +176,16 @@ namespace ContactModels {
 	   i_forces.delta_F[0] += fx;
 	   i_forces.delta_F[1] += fy;
 	   i_forces.delta_F[2] += fz;
-
-	   j_forces.delta_F[0] -= fx;
+       
+       j_forces.delta_F[0] -= fx;
 	   j_forces.delta_F[1] -= fy;
 	   j_forces.delta_F[2] -= fz;
 	}
   
   private:
+    double ** coeffMu;
 	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;	
+    bool   particleOnly;
   };
  }
 }
