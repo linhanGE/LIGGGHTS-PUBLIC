@@ -64,10 +64,10 @@ namespace MODEL_PARAMS {
 	  ScalarProperty* fluidDensityScalar = MODEL_PARAMS::createScalarProperty(registry, "fluidDensity", caller);
 	  return fluidDensityScalar;
 	}
-		inline static ScalarProperty* createEta_eMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+		inline static ScalarProperty* createStcMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
-	  ScalarProperty* eta_eScalar = MODEL_PARAMS::createScalarProperty(registry, "eta_e", caller);
-	  return eta_eScalar;
+	  ScalarProperty* stc_Scalar = MODEL_PARAMS::createScalarProperty(registry, "stc", caller);
+	  return stc_Scalar;
 	}
 }
 
@@ -83,7 +83,7 @@ namespace ContactModels
 	  k_n(NULL),
 	  k_t(NULL),
 	  e_dry(NULL),
-	  eta_e(0),
+	  stc(0),
       fluidViscosity(0),
       fluidDensity(0),
 	  tangential_damping(false),
@@ -106,7 +106,7 @@ namespace ContactModels
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-      settings.registerOnOff("wallOnly", tangential_damping, true);
+      settings.registerOnOff("wallOnly", wallOnly, true);
       settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -155,13 +155,13 @@ namespace ContactModels
 	  registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
       registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
-	  registry.registerProperty("eta_e", &MODEL_PARAMS::createEta_eMHS);
+	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
 	  registry.registerProperty("fluidViscosity", &MODEL_PARAMS::createFluidViscosityMHS);
 	  registry.registerProperty("fluidDensity", &MODEL_PARAMS::createFluidDensityMHS);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
-	  registry.connect("eta_e", eta_e,"model myhooke/stiffness");
+	  registry.connect("stc", stc,"model myhooke/stiffness");
 	  registry.connect("fluidViscosity", fluidViscosity,"model myhooke/stiffness");
 	  registry.connect("fluidDensity", fluidDensity,"model myhooke/stiffness");
 
@@ -236,11 +236,6 @@ namespace ContactModels
 	  if(!displayedSettings)
 	  {
 		displayedSettings = true;
-
-		/*
-		if(limitForce)
-			if(0 == comm->me) fprintf(screen," NormalModel<MYHOOKE_STIFFNESS>: will limit normal force.\n");
-		*/
 	  }
 
 	  if (!tangential_damping) gammat = 0.0;
@@ -253,24 +248,26 @@ namespace ContactModels
       double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);
 
-      // Eq.3.13 Izard, E., Bonometti, T., Lacaze, L., 2014. Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. Journal of Fluid Mechanics 747, 422-446.
+      /* Eq.(3.13) Izard, E., Bonometti, T., Lacaze, L., 2014. 
+      Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. 
+      Journal of Fluid Mechanics 747, 422-446.*/
+
       const double st = (rhoi +  0.5*fluidDensity)*impactVn*2*radi/(9*fluidViscosity);
-	  const double stc = log(radi/eta_e);
-      double ewet = 0;
 
       if (st <= stc) {
          gamman = 2*sqrt(meff*kn);
       } else {
-         ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
-         gamman = -2*log(ewet)*sqrt(meff*kn)/sqrt(log(ewet)*log(ewet) + M_PI*M_PI);
+         const double ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
+         gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
       }
 
 
       if (!sidata.is_wall && wallOnly){
-          gamman = -2*log(edry)*sqrt(meff*kn)/sqrt(log(edry)*log(edry) + M_PI*M_PI);          
+          gamman = sqrt(4.*meff*kn*log(edry)*log(edry)/(log(edry)*log(edry)+M_PI*M_PI));          
       } 
 
       gammat = gamman;
+
       const double Fn_damping = -gamman*sidata.vn;    
 	  const double Fn_contact = kn*sidata.deltan;
       double Fn = Fn_damping + Fn_contact;
@@ -423,7 +420,7 @@ namespace ContactModels
 	double ** k_n;
 	double ** k_t;
     double ** e_dry;
-    double eta_e,fluidViscosity,fluidDensity;
+    double stc,fluidViscosity,fluidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
