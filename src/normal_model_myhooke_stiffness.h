@@ -88,7 +88,7 @@ namespace ContactModels
 	  dissipation_history_offset_(0)
 	{
 	  velocity_offset = hsetup->add_history_value("impactV", "1");
-	  c->add_history_offset("impact_velocity", velocity_offset);
+	  c->add_history_offset("velocity_offset", velocity_offset);
 	}
 
 	void registerSettings(Settings & settings)
@@ -222,8 +222,7 @@ namespace ContactModels
 	  double kt = k_t[itype][jtype];
       const double edry = e_dry[itype][jtype];
       const double fluidViscosity = coeffMu[itype][jtype];
-
-	  double gamman,gammat;
+      double gamman,gammat;
 	  
 	  if(!displayedSettings)
 	  {
@@ -231,6 +230,7 @@ namespace ContactModels
 	  }
 
       gammat = gamma_t[itype][jtype];
+
 	  if (!tangential_damping) gammat = 0.0;
 
 	  // convert Kn and Kt from pressure units to force/distance^2
@@ -258,7 +258,7 @@ namespace ContactModels
           gamman = sqrt(4.*meff*kn*log(edry)*log(edry)/(log(edry)*log(edry)+M_PI*M_PI));          
       } 
 
-      const double Fn_damping = -gamman*sidata.vn;    
+      const double Fn_damping = -gamman*sidata.vn;
 	  const double Fn_contact = kn*sidata.deltan;
       double Fn = Fn_damping + Fn_contact;
 
@@ -268,6 +268,8 @@ namespace ContactModels
 	  {
 		  Fn = 0.0;
 	  }
+
+      sidata.Fn = Fn;
 
       sidata.kn = kn;
 	  sidata.kt = kt;
