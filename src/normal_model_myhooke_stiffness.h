@@ -88,7 +88,7 @@ namespace ContactModels
 	  dissipation_history_offset_(0)
 	{
 	  velocity_offset = hsetup->add_history_value("impactV", "1");
-	  c->add_history_offset("velocity_offset", velocity_offset);
+	  // c->add_history_offset("velocity_offset", velocity_offset);
 	}
 
 	void registerSettings(Settings & settings)
@@ -378,7 +378,7 @@ namespace ContactModels
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
-		if (scdata.contact_flags) *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
+		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
 		
 		double * const impactVelocity = &scdata.contact_history[velocity_offset]; 
 		const int i = scdata.i;
