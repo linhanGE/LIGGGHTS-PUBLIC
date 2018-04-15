@@ -378,7 +378,7 @@ namespace ContactModels
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
-		if (scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
+		if (scdata.contact_flags) *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
 		
 		double * const impactVelocity = &scdata.contact_history[velocity_offset]; 
 		const int i = scdata.i;
