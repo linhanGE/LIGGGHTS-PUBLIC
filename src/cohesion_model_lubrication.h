@@ -167,7 +167,7 @@ namespace ContactModels {
 
 	   double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 
-       if (scdata.is_wall && particleOnly) F_lubrication = 0;
+       if (scdata.is_wall && particleOnly) F_lubrication = 0.;
 			  
 	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
 	   const double fy = F_lubrication * eny;				 

@@ -182,7 +182,7 @@ public:
 
     
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
-    sidata.rsq = (sidata.deltan < 0) ? 0 : sidata.r*sidata.r;
+    sidata.rsq = sidata.r*sidata.r;
     const double rinv = 1.0/sidata.r;
     sidata.rinv = rinv;
     sidata.area_ratio = 1.;
@@ -336,7 +336,7 @@ public:
           double normal[3];
           vectorCopy3D(sidata.en, normal);
           vectorNegate3D(normal);
-          wg->compute_wall_gran_local()->add_wall_2(sidata.i,fx,fy,fz,tor1,tor2,tor3,sidata.contact_history,sidata.rsq, normal);
+          wg->compute_wall_gran_local()->add_wall_2(sidata.i,fx,fy,fz,tor1,tor2,tor3,sidata.contact_history,sidata.deltan, normal);
     }
 
     // add heat flux
