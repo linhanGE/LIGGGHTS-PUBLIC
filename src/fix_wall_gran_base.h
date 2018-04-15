@@ -180,8 +180,9 @@ public:
     sidata.omega_i = omega;
     sidata.densityi = rhoi;
 
+    
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
-    sidata.rsq = sidata.r*sidata.r;
+    sidata.rsq = (sidata.deltan < 0) ? 0 : sidata.r*sidata.r;
     const double rinv = 1.0/sidata.r;
     sidata.rinv = rinv;
     sidata.area_ratio = 1.;
