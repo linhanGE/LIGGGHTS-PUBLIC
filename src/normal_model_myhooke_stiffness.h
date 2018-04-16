@@ -58,6 +58,12 @@ namespace MODEL_PARAMS {
 	  ScalarProperty* stc_Scalar = MODEL_PARAMS::createScalarProperty(registry, "stc", caller);
 	  return stc_Scalar;
 	}
+
+    inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
+	  return beta_Scalar;
+	}
 }
 
 namespace LIGGGHTS {
@@ -74,11 +80,11 @@ namespace ContactModels
 	  e_dry(NULL),
       coeffMu(NULL),
       gamma_t(NULL),
-	  stc(0),
+	  stc(0.),
+      beta(0.),
       liquidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
-      wallOnly(false),
 	  displayedSettings(false),
 	  velocity_offset(0),
 	  elastic_potential_offset_(0),
@@ -88,13 +94,12 @@ namespace ContactModels
 	  dissipation_history_offset_(0)
 	{
 	  velocity_offset = hsetup->add_history_value("impactV", "1");
-	  // c->add_history_offset("velocity_offset", velocity_offset);
 	}
 
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-      settings.registerOnOff("wallOnly", wallOnly, true);
+      //settings.registerOnOff("wallOnly", wallOnly, true);
       settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -144,6 +149,7 @@ namespace ContactModels
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
       registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
+      registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
 	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 	  registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
       registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
@@ -151,6 +157,7 @@ namespace ContactModels
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
+      registry.connect("beta", beta,"model myhooke/stiffness");
 	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
 	  registry.connect("liquidDensity", liquidDensity,"model myhooke/stiffness");
       registry.connect("gammat", gamma_t,"model myhooke/stiffness");
@@ -159,7 +166,7 @@ namespace ContactModels
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
 
-      neighbor->register_contact_dist_factor(1.01);
+      neighbor->register_contact_dist_factor(1.001);
 
 	  // enlarge contact distance flag in case of elastic energy computation
 	  // to ensure that surfaceClose is called after a contact
@@ -241,22 +248,16 @@ namespace ContactModels
       double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);
 
-      /* Eq.(3.13) Izard, E., Bonometti, T., Lacaze, L., 2014. 
-      Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. 
-      Journal of Fluid Mechanics 747, 422-446.*/
+      // Legendre etal. 2005
 
-      const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000001)*2*radi/(9*fluidViscosity);
+      const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000000001)*2*radi/(9*fluidViscosity);
 
       if (st <= stc) {
          gamman = 2*sqrt(meff*kn);
       } else {
-         const double ewet = edry*(1-stc/st)*exp(-M_PI/2/sqrt(st-stc));     
+         const double ewet = exp(-beta/st);     
          gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
       }
-
-      if (!sidata.is_wall && wallOnly){
-          gamman = sqrt(4.*meff*kn*log(edry)*log(edry)/(log(edry)*log(edry)+M_PI*M_PI));          
-      } 
 
       const double Fn_damping = -gamman*sidata.vn;
 	  const double Fn_contact = kn*sidata.deltan;
@@ -410,7 +411,7 @@ namespace ContactModels
 
   protected:
 	double ** k_n, ** k_t, ** e_dry, **coeffMu,** gamma_t;
-    double stc,fluidViscosity,liquidDensity;
+    double stc,beta,fluidViscosity,liquidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;

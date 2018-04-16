@@ -89,14 +89,14 @@ namespace ContactModels {
       fluidViscosity(0.),
       minSeparationDist(0.),
       maxSeparationDistRatio(0.),
-      particleOnly(true)
+      contact_damping(false)
 	{
 		
 	}
 
 	inline void registerSettings(Settings& settings) 
     {
-        settings.registerOnOff("particleOnly", particleOnly, true);
+        settings.registerOnOff("contact_damping", contact_damping,false);    
     }
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
     
@@ -124,7 +124,33 @@ namespace ContactModels {
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-	   if(sidata.contact_flags) *sidata.contact_flags &= ~CONTACT_COHESION_MODEL;
+	   if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
+
+       if (!contact_damping) return;
+
+       const int itype = sidata.itype;
+       const int jtype = sidata.jtype;
+	   const double radi = sidata.radi;
+	   const double radj = sidata.is_wall ? radi : sidata.radj;
+	   const double radsum = sidata.radsum;
+	   const double rEff = sidata.is_wall ? radi : radi*radj / radsum;
+	   const double d = minSeparationDist;
+
+       const double fluidViscosity = coeffMu[itype][jtype];
+
+	   double F_lubrication = -6*M_PI*fluidViscosity*sidata.vn*rEff*rEff/d;
+
+	   const double fx = F_lubrication * sidata.en[0];    			//en represent the normal direction vector, en[0] is the x coordinate
+	   const double fy = F_lubrication * sidata.en[1];				 
+	   const double fz = F_lubrication * sidata.en[2];				 
+
+	   i_forces.delta_F[0] += fx;
+	   i_forces.delta_F[1] += fy;
+	   i_forces.delta_F[2] += fz;
+       
+       j_forces.delta_F[0] -= fx;
+	   j_forces.delta_F[1] -= fy;
+	   j_forces.delta_F[2] -= fz;
 	}
 
 	void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
@@ -167,9 +193,7 @@ namespace ContactModels {
 
 	   double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 
-       if (scdata.is_wall && particleOnly) F_lubrication = 0.;
-			  
-	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
+	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, enx is the x coordinate
 	   const double fy = F_lubrication * eny;				 
 	   const double fz = F_lubrication * enz;				 
 
@@ -184,8 +208,8 @@ namespace ContactModels {
   
   private:
     double ** coeffMu;
-	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;	
-    bool   particleOnly;
+	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
+    bool contact_damping;
   };
  }
 }

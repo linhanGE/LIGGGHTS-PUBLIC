@@ -227,10 +227,6 @@ namespace ContactModels
          coeffRestLogChosen=coeffRestLog[itype][jtype];
       }
 
-      if (!sidata.is_wall && wallOnly){
-          coeffRestLogChosen=coeffRestLog[itype][jtype];          
-      } 
-
       const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
       const double gamman=sqrt(4.*meff*kn*coeffRestLogChosenSq/(coeffRestLogChosenSq+M_PI*M_PI));
       const double gammat = tangential_damping ? gamman : 0.0;
