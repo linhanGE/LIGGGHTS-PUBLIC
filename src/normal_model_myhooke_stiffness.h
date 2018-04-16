@@ -245,7 +245,7 @@ namespace ContactModels
       Modelling the dynamics of a sphere approaching and bouncing on a wall in a viscous fluid. 
       Journal of Fluid Mechanics 747, 422-446.*/
 
-      const double st = (rhoi +  0.5*liquidDensity)*impactVn*2*radi/(9*fluidViscosity);
+      const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000001)*2*radi/(9*fluidViscosity);
 
       if (st <= stc) {
          gamman = 2*sqrt(meff*kn);

@@ -60,11 +60,12 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
-      /*gamma_n(NULL),
-      gamma_t(NULL),*/
-      betaeff(NULL),
+      coeffRestMax(NULL),
+      coeffRestLog(NULL),
+      coeffMu(NULL),
+      coeffStc(NULL),
+      viscous(false),
       tangential_damping(false),
-      absolute_damping(false),
       limitForce(false),
       displayedSettings(false),
       elastic_potential_offset_(0),
@@ -78,8 +79,8 @@ namespace ContactModels
 
     void registerSettings(Settings & settings)
     {
+      settings.registerOnOff("viscous", viscous);
       settings.registerOnOff("tangential_damping", tangential_damping, true);
-      settings.registerOnOff("absolute_damping", absolute_damping);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
       settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -126,23 +127,23 @@ namespace ContactModels
     void connectToProperties(PropertyRegistry & registry) {
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
-      registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff,"model hooke/stiffness");
 
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
-      registry.connect("betaeff", betaeff,"model hooke/stiffness");
 
-      /*if(absolute_damping) {
-        registry.registerProperty("gamman_abs", &MODEL_PARAMS::createGammanAbs);
-        registry.registerProperty("gammat_abs", &MODEL_PARAMS::createGammatAbs);
-        registry.connect("gamman_abs", gamma_n,"model hooke/stiffness");
-        registry.connect("gammat_abs", gamma_t,"model hooke/stiffness");
+      if(viscous) {
+        registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
+        registry.registerProperty("coeffStc", &MODEL_PARAMS::createCoeffStc);
+        registry.registerProperty("coeffRestMax", &MODEL_PARAMS::createCoeffRestMax);
+
+        registry.connect("coeffMu", coeffMu,"model hooke/stiffness/viscous");
+        registry.connect("coeffStc", coeffStc,"model hooke/stiffness/viscous");
+        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness/viscous");
       } else {
-        registry.registerProperty("gamman", &MODEL_PARAMS::createGamman);
-        registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
-        registry.connect("gamman", gamma_n,"model hooke/stiffness");
-        registry.connect("gammat", gamma_t,"model hooke/stiffness");
-      }*/
+        registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
+
+        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness/viscous");
+      }
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -201,7 +202,12 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
+      const double radi = sidata.radi;
+      const double radj = sidata.radj;
+
+      double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
       double meff=sidata.meff;
+      double coeffRestLogChosen;
 
       double kn = k_n[itype][jtype];
       double kt = k_t[itype][jtype];
@@ -210,32 +216,28 @@ namespace ContactModels
       if(!displayedSettings)
       {
         displayedSettings = true;
-
-        /*
-        if(limitForce)
-            if(0 == comm->me) fprintf(screen," NormalModel<HOOKE_STIFFNESS>: will limit normal force.\n");
-        */
       }
-      
-      /*if(absolute_damping)
-      {
-        gamman = gamma_n[itype][jtype];
-        gammat = gamma_t[itype][jtype];
-      }
-      else
-      {
-        gamman = meff*gamma_n[itype][jtype];
-        gammat = meff*gamma_t[itype][jtype];
-      }*/
 
-      if (!tangential_damping) gammat = 0.0;
+      if (viscous)  {
+         // Stokes Number from MW Schmeeckle (2001)
+         const double stokes=sidata.meff*sidata.vn/(6.0*M_PI*coeffMu[itype][jtype]*reff*reff);
+         // Empirical from Legendre (2006)
+         coeffRestLogChosen=log(coeffRestMax[itype][jtype])+coeffStc[itype][jtype]/stokes;
+      } else {
+         coeffRestLogChosen=coeffRestLog[itype][jtype];
+      }
+
+      if (!sidata.is_wall && wallOnly){
+          coeffRestLogChosen=coeffRestLog[itype][jtype];          
+      } 
+
+      const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
+      const double gamman=sqrt(4.*meff*kn*coeffRestLogChosenSq/(coeffRestLogChosenSq+M_PI*M_PI));
+      const double gammat = tangential_damping ? gamman : 0.0;
 
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
       kt /= force->nktv2p;
-
-      gamman = -2*betaeff[itype][jtype]*sqrt(meff*kn);
-      gammat = gamman;
 
       const double Fn_damping = -gamman*sidata.vn;    
       const double Fn_contact = kn*sidata.deltan;
@@ -384,12 +386,13 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
-    //double ** gamma_n;
-    //double ** gamma_t;
-    double ** betaeff;
+    double ** coeffRestMax;
+    double ** coeffRestLog;
+    double ** coeffMu;
+    double ** coeffStc;
 
+    bool viscous;
     bool tangential_damping;
-    bool absolute_damping;
     bool limitForce;
     bool displayedSettings;
     int elastic_potential_offset_;
