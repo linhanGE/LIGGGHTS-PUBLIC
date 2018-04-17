@@ -255,7 +255,7 @@ namespace ContactModels
       if (st <= stc) {
          gamman = 2*sqrt(meff*kn);
       } else {
-         const double ewet = exp(-beta/st);     
+         const double ewet = edry*exp(-beta/st);     
          gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
       }
 

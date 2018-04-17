@@ -211,7 +211,6 @@ namespace ContactModels
 
       double kn = k_n[itype][jtype];
       double kt = k_t[itype][jtype];
-      double gamman, gammat;
 
       if(!displayedSettings)
       {
