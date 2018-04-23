@@ -129,19 +129,9 @@ namespace ContactModels
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
 
-      if(viscous) {
-        registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
-        registry.registerProperty("coeffStc", &MODEL_PARAMS::createCoeffStc);
-        registry.registerProperty("coeffRestMax", &MODEL_PARAMS::createCoeffRestMax);
 
-        registry.connect("coeffMu", coeffMu,"model hooke/stiffness/viscous");
-        registry.connect("coeffStc", coeffStc,"model hooke/stiffness/viscous");
-        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness/viscous");
-      } else {
         registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
-
         registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness/viscous");
-      }
 
       // error checks on coarsegraining
       if(force->cg_active())
