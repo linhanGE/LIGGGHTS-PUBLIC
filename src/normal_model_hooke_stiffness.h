@@ -64,7 +64,6 @@ namespace ContactModels
       coeffRestLog(NULL),
       coeffMu(NULL),
       coeffStc(NULL),
-      viscous(false),
       tangential_damping(false),
       limitForce(false),
       displayedSettings(false),
@@ -79,7 +78,6 @@ namespace ContactModels
 
     void registerSettings(Settings & settings)
     {
-      settings.registerOnOff("viscous", viscous);
       settings.registerOnOff("tangential_damping", tangential_damping, true);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
@@ -217,14 +215,7 @@ namespace ContactModels
         displayedSettings = true;
       }
 
-      if (viscous)  {
-         // Stokes Number from MW Schmeeckle (2001)
-         const double stokes=sidata.meff*sidata.vn/(6.0*M_PI*coeffMu[itype][jtype]*reff*reff);
-         // Empirical from Legendre (2006)
-         coeffRestLogChosen=log(coeffRestMax[itype][jtype])+coeffStc[itype][jtype]/stokes;
-      } else {
-         coeffRestLogChosen=coeffRestLog[itype][jtype];
-      }
+      coeffRestLogChosen=coeffRestLog[itype][jtype];
 
       const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
       const double gamman=sqrt(4.*meff*kn*coeffRestLogChosenSq/(coeffRestLogChosenSq+M_PI*M_PI));
@@ -386,7 +377,6 @@ namespace ContactModels
     double ** coeffMu;
     double ** coeffStc;
 
-    bool viscous;
     bool tangential_damping;
     bool limitForce;
     bool displayedSettings;

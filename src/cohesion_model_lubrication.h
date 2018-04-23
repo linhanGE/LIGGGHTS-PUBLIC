@@ -96,7 +96,7 @@ namespace ContactModels {
 
 	inline void registerSettings(Settings& settings) 
     {
-        settings.registerOnOff("contact_damping", contact_damping,false);    
+        settings.registerOnOff("contact_damping", contact_damping, false);    
     }
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
     

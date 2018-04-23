@@ -69,6 +69,7 @@ struct SurfacesCloseData {
   double zj;
   double densityi;
   double densityj;
+  double deltan;
 
   double area_ratio;
 
@@ -150,7 +151,6 @@ struct SurfacesIntersectData : SurfacesCloseData {
   double Ft;
 
   double vn;
-  double deltan;
   double cri;   
   double crj;   
   double wr1;   
