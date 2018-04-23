@@ -60,10 +60,7 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
-      coeffRestMax(NULL),
       coeffRestLog(NULL),
-      coeffMu(NULL),
-      coeffStc(NULL),
       tangential_damping(false),
       limitForce(false),
       displayedSettings(false),
@@ -193,7 +190,6 @@ namespace ContactModels
       const double radi = sidata.radi;
       const double radj = sidata.radj;
 
-      double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
       double meff=sidata.meff;
       double coeffRestLogChosen;
 
@@ -362,10 +358,7 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
-    double ** coeffRestMax;
     double ** coeffRestLog;
-    double ** coeffMu;
-    double ** coeffStc;
 
     bool tangential_damping;
     bool limitForce;
