@@ -86,20 +86,20 @@ namespace ContactModels
 	  tangential_damping(false),
 	  limitForce(false),
 	  displayedSettings(false),
-	  velocity_offset(0),
+	  history_offset(0),
 	  elastic_potential_offset_(0),
 	  elasticpotflag_(false),
 	  fix_dissipated_(NULL),
 	  dissipatedflag_(false),
 	  dissipation_history_offset_(0)
 	{
-	  velocity_offset = hsetup->add_history_value("impactV", "1");
+	  history_offset = hsetup->add_history_value("impactV", "1");
+
 	}
 
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-	  //settings.registerOnOff("wallOnly", wallOnly, true);
 	  settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -166,7 +166,7 @@ namespace ContactModels
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
 
-	  neighbor->register_contact_dist_factor(1.001);
+	  neighbor->register_contact_dist_factor(1.1);
 
 	  // enlarge contact distance flag in case of elastic energy computation
 	  // to ensure that surfaceClose is called after a contact
@@ -245,12 +245,12 @@ namespace ContactModels
 	  kt /= force->nktv2p;
 	  
 	  // get impact velocity
-	  double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
+	  double * const impactVelocity = &sidata.contact_history[history_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);
 
 	  // Legendre etal. 2005
 
-	  const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000000001)*2*radi/(9*fluidViscosity);
+	  const double st = (rhoi +  0.5*liquidDensity)*impactVn*2*radi/(9*fluidViscosity);
 
 	  if (st <= stc) {
 		 gamman = 2*sqrt(meff*kn);
@@ -380,8 +380,11 @@ namespace ContactModels
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
 		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
-		
-		double * const impactVelocity = &scdata.contact_history[velocity_offset]; 
+
+		if(!scdata.contact_history)
+		  return; //DO NOT access contact_history if not available
+
+		double * const impactVelocity = &scdata.contact_history[history_offset]; 
 		const int i = scdata.i;
 		const int j = scdata.j;
 		const double r = sqrt(scdata.rsq);
@@ -415,7 +418,7 @@ namespace ContactModels
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
-	int velocity_offset;
+	int history_offset;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
 	FixPropertyAtom *fix_dissipated_;

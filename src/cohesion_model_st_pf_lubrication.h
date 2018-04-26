@@ -253,19 +253,19 @@ namespace ContactModels {
 	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
 	   const double fy = F_lubrication * eny;				 
 	   const double fz = F_lubrication * enz;				 
-        if(scdata.is_wall) {
-            i_forces.delta_F[0] += fx;
-            i_forces.delta_F[1] += fy;
-            i_forces.delta_F[2] += fz;
-        } else {
-            i_forces.delta_F[0] += fx;
-            i_forces.delta_F[1] += fy;
-            i_forces.delta_F[2] += fz;
+		if(scdata.is_wall) {
+			i_forces.delta_F[0] += fx;
+			i_forces.delta_F[1] += fy;
+			i_forces.delta_F[2] += fz;
+		} else {
+			i_forces.delta_F[0] += fx;
+			i_forces.delta_F[1] += fy;
+			i_forces.delta_F[2] += fz;
 
-            j_forces.delta_F[0] -= fx;
-            j_forces.delta_F[1] -= fy;
-            j_forces.delta_F[2] -= fz;
-        }
+			j_forces.delta_F[0] -= fx;
+			j_forces.delta_F[1] -= fy;
+			j_forces.delta_F[2] -= fz;
+		}
 	}
 
   private:

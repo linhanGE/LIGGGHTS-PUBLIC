@@ -78,17 +78,17 @@ namespace ContactModels {
   using namespace std;
   using namespace LAMMPS_NS;
 
-    template<>
-    class CohesionModel<COHESION_LUBRICATION> : public CohesionModelBase {
-    public:
-    static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
+	template<>
+	class CohesionModel<COHESION_LUBRICATION> : public CohesionModelBase {
+	public:
+	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
-    CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-        CohesionModelBase(lmp, hsetup, cmb), 
-        coeffMu(NULL),
-        fluidViscosity(0.),
-        minSeparationDist(0.),
-        maxSeparationDistRatio(0.)
+	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
+		CohesionModelBase(lmp, hsetup, cmb), 
+		coeffMu(NULL),
+		fluidViscosity(0.),
+		minSeparationDist(0.),
+		maxSeparationDistRatio(0.)
 	{
 		
 	}
@@ -168,20 +168,20 @@ namespace ContactModels {
 		const double fy = F_lubrication * eny;				 
 		const double fz = F_lubrication * enz;				 
 
-         // apply normal force
-        if(scdata.is_wall) {
-            i_forces.delta_F[0] += fx;
-            i_forces.delta_F[1] += fy;
-            i_forces.delta_F[2] += fz;
-        } else {
-            i_forces.delta_F[0] += fx;
-            i_forces.delta_F[1] += fy;
-            i_forces.delta_F[2] += fz;
+		 // apply normal force
+		if(scdata.is_wall) {
+			i_forces.delta_F[0] += fx;
+			i_forces.delta_F[1] += fy;
+			i_forces.delta_F[2] += fz;
+		} else {
+			i_forces.delta_F[0] += fx;
+			i_forces.delta_F[1] += fy;
+			i_forces.delta_F[2] += fz;
 
-            j_forces.delta_F[0] -= fx;
-            j_forces.delta_F[1] -= fy;
-            j_forces.delta_F[2] -= fz;
-      }
+			j_forces.delta_F[0] -= fx;
+			j_forces.delta_F[1] -= fy;
+			j_forces.delta_F[2] -= fz;
+	  }
 	}
   
   private:
