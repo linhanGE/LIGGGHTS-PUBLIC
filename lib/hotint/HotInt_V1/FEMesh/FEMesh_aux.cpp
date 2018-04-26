@@ -201,7 +201,7 @@ int FEElement::PointIsOnSide(const Vector3D& globalpos, const TArray<FEMesh_Node
 		{
 			sidenodes = GetSideNodeNum4(i);
 			dist = ::DistToQuad(nodes(sidenodes(1)).GetCoords3D(),nodes(sidenodes(2)).GetCoords3D(),
-				                  nodes(sidenodes(3)).GetCoords3D(),nodes(sidenodes(4)).GetCoords3D(), globalpos);
+								  nodes(sidenodes(3)).GetCoords3D(),nodes(sidenodes(4)).GetCoords3D(), globalpos);
 			if( abs(dist) < MESH_STD_TOL)
 			{
 				return i;
@@ -607,7 +607,7 @@ int Crosssection::ImportFromIN2D(mystr& filename, int read_boundaries)
 				word = line.GetWord(pos_line);    psp = word.MakeInt();
 			}
 // DONE WITH NON-OPTIONAL CONTENT !
-      while(pos_line!=-1)
+	  while(pos_line!=-1)
 			{
 				word = line.GetWord(pos_line);
 				if(pos_line!=-1)
@@ -1176,7 +1176,7 @@ int Crosssection::BudPolygon(int p1_nr, int p2_nr)
 	for(int i=min_idx; i<=max_idx; i++)
 	{
 	  budpoints.Add(the_polygon.PointNr(i));
-   	if(i!=max_idx)
+	if(i!=max_idx)
 		{
 			budlines.Add(the_polygon.LineNr(i));
 		}
@@ -1359,7 +1359,7 @@ int Crosssection::CutAligned(Vector2D guide, double angular_variance_deg)
 	TArray<int2> budlines;
 	for(int i=1; i<=Lines().Length(); i++)
 	{
-    double ang_dev = TwoPointVectorAngleToReference(Line(i).P1(), Line(i).P2(), guide);
+	double ang_dev = TwoPointVectorAngleToReference(Line(i).P1(), Line(i).P2(), guide);
 		if(abs(ang_dev) <= angular_variance_rad)
 		{
 // only search if lines of higher index are cut ...
@@ -1471,7 +1471,7 @@ int Crosssection::IsInnerLineOfPolygon(int polygonnr, int startingpointnr, int t
 	while (angle_budline<=0.) angle_budline += 2.*MY_PI;
 
 	if(  flag_clockwise && angle_budline >= angle_border ) return 0; // <== DOES NOT START AS INSIDE LINE 
- 	if( !flag_clockwise && angle_budline <= angle_border ) return 0; // <== DOES NOT START AS INSIDE LINE 
+	if( !flag_clockwise && angle_budline <= angle_border ) return 0; // <== DOES NOT START AS INSIDE LINE 
  
 // step I: determine if no other line cuts the budline...
 	for(int i=1; i <= NLines(); i++)
@@ -2788,15 +2788,15 @@ void MeshedCylPart::ReadFromEDC(ElementDataContainer* edcpart)
 		Vector3D n0 = x.Cross(Axis());										// rotation axis
 		n0.Normalize(); 
 		double a = acos((x*Axis()) / Axis().Norm());      // angle between z-axis and chosen axis
-	  Rotation()(1,1) = cos(a) + n0.X()*n0.X()*(1-cos(a));
+	    Rotation()(1,1) = cos(a) + n0.X()*n0.X()*(1-cos(a));
 		Rotation()(1,2) = n0.X()*n0.Y()*(1-cos(a)) - n0.Z()*sin(a);
 		Rotation()(1,3) = n0.X()*n0.Z()*(1-cos(a)) + n0.Y()*sin(a);
 		Rotation()(2,1) = n0.Y()*n0.X()*(1-cos(a)) + n0.Z()*sin(a);
-    Rotation()(2,2) = cos(a) + n0.Y()*n0.Y()*(1-cos(a));
+	    Rotation()(2,2) = cos(a) + n0.Y()*n0.Y()*(1-cos(a));
 		Rotation()(2,3) = n0.Y()*n0.Z()*(1-cos(a)) - n0.X()*sin(a);
 		Rotation()(3,1) = n0.Z()*n0.X()*(1-cos(a)) - n0.Y()*sin(a);
 		Rotation()(3,2) = n0.Z()*n0.Y()*(1-cos(a)) + n0.X()*sin(a);
-    Rotation()(3,3) = cos(a) + n0.Z()*n0.Z()*(1-cos(a));
+	    Rotation()(3,3) = cos(a) + n0.Z()*n0.Z()*(1-cos(a));
 	}
 	
 	// basepoint
@@ -2912,7 +2912,7 @@ void MeshedCylPart::ComputeDivisionsArray()
 		SegmentedCylBlock& theblock = (SegmentedCylBlock&) Block(i); 
 		double rtotal = theblock.RO()-theblock.RI();
 		double rfact = (double)theblock.RadDivs_Block() / rtotal;
-    double htotal = theblock.HT()-theblock.HB();
+	    double htotal = theblock.HT()-theblock.HB();
 		double hfact = (double)theblock.AxiDivs_Block() / htotal;
 
 // compute indices range of this block in set
@@ -3050,7 +3050,7 @@ void MeshedCylPart::ComputeDivisionsArray()
 		{
 			int idx = 1 + (ir-1) + (ih-1)*(rcl-1);
 			int4 divs(divs_rad(ir), divs_tan(ir), divs_axi(ih), refine(ir));
-      Division( idx ) = divs;
+	  Division( idx ) = divs;
 		}
 	}
 }

@@ -78,28 +78,24 @@ namespace ContactModels {
   using namespace std;
   using namespace LAMMPS_NS;
 
-  template<>
-  class CohesionModel<COHESION_LUBRICATION> : public CohesionModelBase {
-  public:
-	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
+    template<>
+    class CohesionModel<COHESION_LUBRICATION> : public CohesionModelBase {
+    public:
+    static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
-	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-	  CohesionModelBase(lmp, hsetup, cmb), 
-      coeffMu(NULL),
-      fluidViscosity(0.),
-      minSeparationDist(0.),
-      maxSeparationDistRatio(0.),
-      contact_damping(false)
+    CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
+        CohesionModelBase(lmp, hsetup, cmb), 
+        coeffMu(NULL),
+        fluidViscosity(0.),
+        minSeparationDist(0.),
+        maxSeparationDistRatio(0.)
 	{
 		
 	}
 
-	inline void registerSettings(Settings& settings) 
-    {
-        settings.registerOnOff("contact_damping", contact_damping, false);    
-    }
-    inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
-    
+	inline void registerSettings(Settings& settings) {}
+	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
+	
 	void connectToProperties(PropertyRegistry & registry)
 	{
 		registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
@@ -114,6 +110,7 @@ namespace ContactModels {
 			error->cg(FLERR,"cohesion model lubrication");
 
 		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
+
 		if(maxSeparationDistRatio < 1.0)
 			error->one(FLERR,"\n\ncohesion model lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
 	}
@@ -124,92 +121,73 @@ namespace ContactModels {
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-	   if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
-
-       if (!contact_damping) return;
-
-       const int itype = sidata.itype;
-       const int jtype = sidata.jtype;
-	   const double radi = sidata.radi;
-	   const double radj = sidata.is_wall ? radi : sidata.radj;
-	   const double radsum = sidata.radsum;
-	   const double rEff = sidata.is_wall ? radi : radi*radj / radsum;
-	   const double d = minSeparationDist;
-
-       const double fluidViscosity = coeffMu[itype][jtype];
-
-	   double F_lubrication = -6*M_PI*fluidViscosity*sidata.vn*rEff*rEff/d;
-
-	   const double fx = F_lubrication * sidata.en[0];    			//en represent the normal direction vector, en[0] is the x coordinate
-	   const double fy = F_lubrication * sidata.en[1];				 
-	   const double fz = F_lubrication * sidata.en[2];				 
-
-	   i_forces.delta_F[0] += fx;
-	   i_forces.delta_F[1] += fy;
-	   i_forces.delta_F[2] += fz;
-       
-       j_forces.delta_F[0] -= fx;
-	   j_forces.delta_F[1] -= fy;
-	   j_forces.delta_F[2] -= fz;
+		if(sidata.contact_flags) *sidata.contact_flags &= ~CONTACT_COHESION_MODEL;
 	}
 
 	void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
 	{
 	   
-	   if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
+		if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
-	   scdata.has_force_update = true;
-       const int i = scdata.i;
-	   const int j = scdata.j;
-       const int itype = scdata.itype;
-       const int jtype = scdata.jtype;
-	   const double radi = scdata.radi;
-	   const double radj = scdata.is_wall ? radi : scdata.radj;
-	   const double r = sqrt(scdata.rsq);
-	   const double radsum = scdata.radsum;
-	   const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
-	   const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
-	   const double d = dist > minSeparationDist ? dist : minSeparationDist;
+		scdata.has_force_update = true;
+		const int i = scdata.i;
+		const int j = scdata.j;
+		const int itype = scdata.itype;
+		const int jtype = scdata.jtype;
+		const double radi = scdata.radi;
+		const double radj = scdata.is_wall ? radi : scdata.radj;
+		const double r = sqrt(scdata.rsq);
+		const double radsum = scdata.radsum;
+		const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
+		const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
+		const double d = dist > minSeparationDist ? dist : minSeparationDist;
 
-       const double fluidViscosity = coeffMu[itype][jtype];
+		const double fluidViscosity = coeffMu[itype][jtype];
 
-	   double **v = atom->v;
-	   // calculate vn and vt since not in struct
-	   const double rinv = 1.0 / r;
-	   const double dx = scdata.delta[0];
-	   const double dy = scdata.delta[1];
-	   const double dz = scdata.delta[2];
-	   const double enx = dx * rinv;
-	   const double eny = dy * rinv;
-	   const double enz = dz * rinv;
+		double **v = atom->v;
+		// calculate vn and vt since not in struct
+		const double rinv = 1.0 / r;
+		const double dx = scdata.delta[0];
+		const double dy = scdata.delta[1];
+		const double dz = scdata.delta[2];
+		const double enx = dx * rinv;
+		const double eny = dy * rinv;
+		const double enz = dz * rinv;
 
-	   // relative translational velocity
-	   const double vr1 = v[i][0] - v[j][0];
-	   const double vr2 = v[i][1] - v[j][1];
-	   const double vr3 = v[i][2] - v[j][2];
+		// relative translational velocity
+		const double vr1 = v[i][0] - v[j][0];
+		const double vr2 = v[i][1] - v[j][1];
+		const double vr3 = v[i][2] - v[j][2];
 
-	   // normal component
-	   const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+		// normal component
+		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 
-	   double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
+		double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 
-	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, enx is the x coordinate
-	   const double fy = F_lubrication * eny;				 
-	   const double fz = F_lubrication * enz;				 
+		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, enx is the x coordinate
+		const double fy = F_lubrication * eny;				 
+		const double fz = F_lubrication * enz;				 
 
-	   i_forces.delta_F[0] += fx;
-	   i_forces.delta_F[1] += fy;
-	   i_forces.delta_F[2] += fz;
-       
-       j_forces.delta_F[0] -= fx;
-	   j_forces.delta_F[1] -= fy;
-	   j_forces.delta_F[2] -= fz;
+         // apply normal force
+        if(scdata.is_wall) {
+            i_forces.delta_F[0] += fx;
+            i_forces.delta_F[1] += fy;
+            i_forces.delta_F[2] += fz;
+        } else {
+            i_forces.delta_F[0] += fx;
+            i_forces.delta_F[1] += fy;
+            i_forces.delta_F[2] += fz;
+
+            j_forces.delta_F[0] -= fx;
+            j_forces.delta_F[1] -= fy;
+            j_forces.delta_F[2] -= fz;
+      }
 	}
   
   private:
-    double ** coeffMu;
+	double ** coeffMu;
 	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
-    bool contact_damping;
+	bool   contact_damping;
   };
  }
 }

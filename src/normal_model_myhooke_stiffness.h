@@ -59,7 +59,7 @@ namespace MODEL_PARAMS {
 	  return stc_Scalar;
 	}
 
-    inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
 	  return beta_Scalar;
@@ -78,11 +78,11 @@ namespace ContactModels
 	  k_n(NULL),
 	  k_t(NULL),
 	  e_dry(NULL),
-      coeffMu(NULL),
-      gamma_t(NULL),
+	  coeffMu(NULL),
+	  gamma_t(NULL),
 	  stc(0.),
-      beta(0.),
-      liquidDensity(0),
+	  beta(0.),
+	  liquidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
 	  displayedSettings(false),
@@ -99,8 +99,8 @@ namespace ContactModels
 	void registerSettings(Settings & settings)
 	{
 	  settings.registerOnOff("tangential_damping", tangential_damping, true);
-      //settings.registerOnOff("wallOnly", wallOnly, true);
-      settings.registerOnOff("limitForce", limitForce);
+	  //settings.registerOnOff("wallOnly", wallOnly, true);
+	  settings.registerOnOff("limitForce", limitForce);
 	  settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
 	  settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
 	}
@@ -147,26 +147,26 @@ namespace ContactModels
 	void connectToProperties(PropertyRegistry & registry) {
 	  registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
-      registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
+	  registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
-      registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
+	  registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
 	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 	  registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
-      registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
+	  registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
-      registry.connect("beta", beta,"model myhooke/stiffness");
+	  registry.connect("beta", beta,"model myhooke/stiffness");
 	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
 	  registry.connect("liquidDensity", liquidDensity,"model myhooke/stiffness");
-      registry.connect("gammat", gamma_t,"model myhooke/stiffness");
+	  registry.connect("gammat", gamma_t,"model myhooke/stiffness");
 
-      // error checks on coarsegraining
+	  // error checks on coarsegraining
 	  if(force->cg_active())
 		error->cg(FLERR,"model myhooke/stiffness");
 
-      neighbor->register_contact_dist_factor(1.001);
+	  neighbor->register_contact_dist_factor(1.001);
 
 	  // enlarge contact distance flag in case of elastic energy computation
 	  // to ensure that surfaceClose is called after a contact
@@ -218,61 +218,61 @@ namespace ContactModels
 	{
 	  if (sidata.contact_flags) *sidata.contact_flags |= CONTACT_NORMAL_MODEL;
 	  
-      const bool update_history = sidata.computeflag && sidata.shearupdate;
+	  const bool update_history = sidata.computeflag && sidata.shearupdate;
 	  const int itype = sidata.itype;
 	  const int jtype = sidata.jtype;
 	  const double rhoi = sidata.densityi;
 	  const double radi = sidata.radi;
-      double meff=sidata.meff;
+	  double meff=sidata.meff;
 
-      double kn = k_n[itype][jtype];
+	  double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
-      const double edry = e_dry[itype][jtype];
-      const double fluidViscosity = coeffMu[itype][jtype];
-      double gamman,gammat;
+	  const double edry = e_dry[itype][jtype];
+	  const double fluidViscosity = coeffMu[itype][jtype];
+	  double gamman,gammat;
 	  
 	  if(!displayedSettings)
 	  {
 		displayedSettings = true;
 	  }
 
-      gammat = gamma_t[itype][jtype];
+	  gammat = gamma_t[itype][jtype];
 
 	  if (!tangential_damping) gammat = 0.0;
 
 	  // convert Kn and Kt from pressure units to force/distance^2
 	  kn /= force->nktv2p;
 	  kt /= force->nktv2p;
-      
-      // get impact velocity
-      double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
+	  
+	  // get impact velocity
+	  double * const impactVelocity = &sidata.contact_history[velocity_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);
 
-      // Legendre etal. 2005
+	  // Legendre etal. 2005
 
-      const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000000001)*2*radi/(9*fluidViscosity);
+	  const double st = (rhoi +  0.5*liquidDensity)*(impactVn+0.0000000000001)*2*radi/(9*fluidViscosity);
 
-      if (st <= stc) {
-         gamman = 2*sqrt(meff*kn);
-      } else {
-         const double ewet = edry*exp(-beta/st);     
-         gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
-      }
+	  if (st <= stc) {
+		 gamman = 2*sqrt(meff*kn);
+	  } else {
+		 const double ewet = edry*exp(-beta/st);     
+		 gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
+	  }
 
-      const double Fn_damping = -gamman*sidata.vn;
+	  const double Fn_damping = -gamman*sidata.vn;
 	  const double Fn_contact = kn*sidata.deltan;
-      double Fn = Fn_damping + Fn_contact;
+	  double Fn = Fn_damping + Fn_contact;
 
-      //limit force to avoid the artefact of negative repulsion force
+	  //limit force to avoid the artefact of negative repulsion force
 
-      if(limitForce && (Fn<0.0) )
+	  if(limitForce && (Fn<0.0) )
 	  {
 		  Fn = 0.0;
 	  }
 
-      sidata.Fn = Fn;
+	  sidata.Fn = Fn;
 
-      sidata.kn = kn;
+	  sidata.kn = kn;
 	  sidata.kt = kt;
 	  sidata.gamman = gamman;
 	  sidata.gammat = gammat;
@@ -385,7 +385,7 @@ namespace ContactModels
 		const int i = scdata.i;
 		const int j = scdata.j;
 		const double r = sqrt(scdata.rsq);
-        			
+					
 		double **v = atom->v;
 		// calculate vn and vt since not in struct
 		const double rinv = 1.0 / r;
@@ -411,11 +411,11 @@ namespace ContactModels
 
   protected:
 	double ** k_n, ** k_t, ** e_dry, **coeffMu,** gamma_t;
-    double stc,beta,fluidViscosity,liquidDensity;
+	double stc,beta,fluidViscosity,liquidDensity;
 
 	bool tangential_damping,limitForce,wallOnly;
 	bool displayedSettings;
-    int velocity_offset;
+	int velocity_offset;
 	int elastic_potential_offset_;
 	bool elasticpotflag_;
 	FixPropertyAtom *fix_dissipated_;
