@@ -82,15 +82,15 @@ namespace ContactModels {
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase * c) :
 		CohesionModelBase(lmp, hsetup, c),
 		surfaceTension(0.0), 
-        contactAngle(NULL), 
-        coeffMu(NULL), 
-        minSeparationDist(0.),
-        maxSeparationDistRatio(0.),
-        liquidDensity(0.),
-        tangentialReduce_(false),
-        capillary_(true),
-        pressure_(true),
-        particleOnly(true)
+		contactAngle(NULL), 
+		coeffMu(NULL), 
+		minSeparationDist(0.),
+		maxSeparationDistRatio(0.),
+		liquidDensity(0.),
+		tangentialReduce_(false),
+		capillary_(true),
+		pressure_(true),
+		particleOnly(true)
 
 	{
 		
@@ -101,7 +101,7 @@ namespace ContactModels {
 		settings.registerOnOff("tangential_reduce",tangentialReduce_,false);
 		settings.registerOnOff("pressure",pressure_,true);
 		settings.registerOnOff("capillary",capillary_,false);
-        settings.registerOnOff("particleOnly", particleOnly, true);
+		settings.registerOnOff("particleOnly", particleOnly, true);
 	}
 
 	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
@@ -112,13 +112,13 @@ namespace ContactModels {
 		registry.registerProperty("contactAngle", &MODEL_PARAMS::createContactAngle);
 		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDistPb);
 		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatioPb);
-        registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
+		registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 		registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
 		registry.connect("surfaceTension",surfaceTension ,"cohesion_model st/pf/lubrication");
 		registry.connect("contactAngle", contactAngle,"cohesion_model st/pf/lubrication");
 		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model st/pf/lubrication");
 		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model st/pf/lubrication");
-        registry.connect("coeffMu", coeffMu,"cohesion_model st/pf/lubrication");
+		registry.connect("coeffMu", coeffMu,"cohesion_model st/pf/lubrication");
 		registry.connect("liquidDensity", liquidDensity,"cohesion_model st/pf/lubrication");
 		// error checks on coarsegraining
 		if(force->cg_active())
@@ -214,10 +214,10 @@ namespace ContactModels {
 	   if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
 	   scdata.has_force_update = true;
-       const int i = scdata.i;
+	   const int i = scdata.i;
 	   const int j = scdata.j;
-       const int itype = scdata.itype;
-       const int jtype = scdata.jtype;
+	   const int itype = scdata.itype;
+	   const int jtype = scdata.jtype;
 	   const double radi = scdata.radi;
 	   const double radj = scdata.is_wall ? radi : scdata.radj;
 	   const double r = sqrt(scdata.rsq);
@@ -226,7 +226,7 @@ namespace ContactModels {
 	   const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
 	   const double d = dist > minSeparationDist ? dist : minSeparationDist;
 
-       const double fluidViscosity = coeffMu[itype][jtype];
+	   const double fluidViscosity = coeffMu[itype][jtype];
 
 	   double **v = atom->v;
 	   // calculate vn and vt since not in struct
@@ -248,27 +248,32 @@ namespace ContactModels {
 
 	   double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 
-       if (scdata.is_wall && particleOnly) F_lubrication = 0;
+	   if (scdata.is_wall && particleOnly) F_lubrication = 0;
 			  
 	   const double fx = F_lubrication * enx;    			//en represent the normal direction vector, en[0] is the x coordinate
 	   const double fy = F_lubrication * eny;				 
 	   const double fz = F_lubrication * enz;				 
+        if(scdata.is_wall) {
+            i_forces.delta_F[0] += fx;
+            i_forces.delta_F[1] += fy;
+            i_forces.delta_F[2] += fz;
+        } else {
+            i_forces.delta_F[0] += fx;
+            i_forces.delta_F[1] += fy;
+            i_forces.delta_F[2] += fz;
 
-	   i_forces.delta_F[0] += fx;
-	   i_forces.delta_F[1] += fy;
-	   i_forces.delta_F[2] += fz;
-       
-       j_forces.delta_F[0] -= fx;
-	   j_forces.delta_F[1] -= fy;
-	   j_forces.delta_F[2] -= fz;
+            j_forces.delta_F[0] -= fx;
+            j_forces.delta_F[1] -= fy;
+            j_forces.delta_F[2] -= fz;
+        }
 	}
 
   private:
 	double surfaceTension;
 	double * contactAngle;
-    double **coeffMu;
+	double **coeffMu;
 	double fluidViscosity,minSeparationDist, maxSeparationDistRatio,liquidDensity;
-    bool tangentialReduce_,capillary_,pressure_,particleOnly;
+	bool tangentialReduce_,capillary_,pressure_,particleOnly;
   };
 }
 }
