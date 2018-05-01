@@ -246,7 +246,7 @@ namespace ContactModels
 		 gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
 	  }
 
-      const double gammat = gamman;
+      gammat = gamman;
 
 	  const double Fn_damping = -gamman*sidata.vn;
 	  const double Fn_contact = kn*sidata.deltan;
