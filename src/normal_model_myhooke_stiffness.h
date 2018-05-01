@@ -58,12 +58,6 @@ namespace MODEL_PARAMS {
 	  ScalarProperty* stc_Scalar = MODEL_PARAMS::createScalarProperty(registry, "stc", caller);
 	  return stc_Scalar;
 	}
-
-	inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
-	  return beta_Scalar;
-	}
 }
 
 namespace LIGGGHTS {
@@ -79,9 +73,7 @@ namespace ContactModels
 	  k_t(NULL),
 	  e_dry(NULL),
 	  coeffMu(NULL),
-	  gamma_t(NULL),
 	  stc(0.),
-	  beta(0.),
 	  liquidDensity(0),
 	  tangential_damping(false),
 	  limitForce(false),
@@ -149,18 +141,14 @@ namespace ContactModels
 	  registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
 	  registry.registerProperty("e_dry", &MODEL_PARAMS::createEdry);
 	  registry.registerProperty("stc", &MODEL_PARAMS::createStcMHS);
-	  registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
 	  registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 	  registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
-	  registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
 	  registry.connect("k_n", k_n,"model myhooke/stiffness");
 	  registry.connect("k_t", k_t,"model myhooke/stiffness");
 	  registry.connect("e_dry", e_dry,"model myhooke/stiffness");
 	  registry.connect("stc", stc,"model myhooke/stiffness");
-	  registry.connect("beta", beta,"model myhooke/stiffness");
 	  registry.connect("coeffMu", coeffMu,"model myhooke/stiffness");
 	  registry.connect("liquidDensity", liquidDensity,"model myhooke/stiffness");
-	  registry.connect("gammat", gamma_t,"model myhooke/stiffness");
 
 	  // error checks on coarsegraining
 	  if(force->cg_active())
@@ -236,8 +224,6 @@ namespace ContactModels
 		displayedSettings = true;
 	  }
 
-	  gammat = gamma_t[itype][jtype];
-
 	  if (!tangential_damping) gammat = 0.0;
 
 	  // convert Kn and Kt from pressure units to force/distance^2
@@ -248,16 +234,19 @@ namespace ContactModels
 	  double * const impactVelocity = &sidata.contact_history[history_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);
 
-	  // Legendre etal. 2005
+	  // Izard etal. 2014
 
 	  const double st = (rhoi +  0.5*liquidDensity)*impactVn*2*radi/(9*fluidViscosity);
 
 	  if (st <= stc) {
 		 gamman = 2*sqrt(meff*kn);
 	  } else {
-		 const double ewet = edry*exp(-beta/st);     
+         // Eq. 3.13
+		 const double ewet = edry*(1-stc/st)*exp(-0.5*M_PI/sqrt(st-stc));     
 		 gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
 	  }
+
+      const double gammat = gamman;
 
 	  const double Fn_damping = -gamman*sidata.vn;
 	  const double Fn_contact = kn*sidata.deltan;
@@ -413,10 +402,10 @@ namespace ContactModels
 	void endPass(SurfacesIntersectData&, ForceData&, ForceData&){}
 
   protected:
-	double ** k_n, ** k_t, ** e_dry, **coeffMu,** gamma_t;
-	double stc,beta,fluidViscosity,liquidDensity;
+	double ** k_n, ** k_t, ** e_dry, **coeffMu;
+	double stc,fluidViscosity,liquidDensity;
 
-	bool tangential_damping,limitForce,wallOnly;
+	bool tangential_damping,limitForce;
 	bool displayedSettings;
 	int history_offset;
 	int elastic_potential_offset_;
