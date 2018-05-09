@@ -127,8 +127,8 @@ namespace ContactModels
       registry.connect("k_t", k_t,"model hooke/stiffness");
 
 
-        registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
-        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness/viscous");
+      registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
+      registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness/viscous");
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -138,7 +138,7 @@ namespace ContactModels
       // to ensure that surfaceClose is called after a contact
       if (elasticpotflag_)
           //set neighbor contact_distance_factor here
-          neighbor->register_contact_dist_factor(1.01);
+          neighbor->register_contact_dist_factor(1.1);
     }
 
     // effective exponent for stress-strain relationship

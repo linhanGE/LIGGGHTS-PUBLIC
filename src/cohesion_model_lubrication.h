@@ -109,7 +109,7 @@ namespace ContactModels {
 		if(force->cg_active())
 			error->cg(FLERR,"cohesion model lubrication");
 
-		neighbor->register_contact_dist_factor(maxSeparationDistRatio); 
+		neighbor->register_contact_dist_factor(maxSeparationDistRatio*1.1); 
 
 		if(maxSeparationDistRatio < 1.0)
 			error->one(FLERR,"\n\ncohesion model lubrication requires maxSeparationDistanceRatio >= 1.0. Please increase this value.\n");
@@ -126,11 +126,8 @@ namespace ContactModels {
 
 	void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
 	{
-	   
-		if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
 
-		scdata.has_force_update = true;
-		const int i = scdata.i;
+        const int i = scdata.i;
 		const int j = scdata.j;
 		const int itype = scdata.itype;
 		const int jtype = scdata.jtype;
@@ -141,47 +138,61 @@ namespace ContactModels {
 		const double dist = scdata.is_wall ? r - radi : r - (radi + radj);
 		const double rEff = scdata.is_wall ? radi : radi*radj / radsum;
 		const double d = dist > minSeparationDist ? dist : minSeparationDist;
+        const double fluidViscosity = coeffMu[itype][jtype];
 
-		const double fluidViscosity = coeffMu[itype][jtype];
+        bool lubrication = false;
+        if(!scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*(radi+radj)) lubrication =true;
+        else if (scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*radi) lubrication =true;
+        
+        if (lubrication) {
+           
+            if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
+            scdata.has_force_update = true;
 
-		double **v = atom->v;
-		// calculate vn and vt since not in struct
-		const double rinv = 1.0 / r;
-		const double dx = scdata.delta[0];
-		const double dy = scdata.delta[1];
-		const double dz = scdata.delta[2];
-		const double enx = dx * rinv;
-		const double eny = dy * rinv;
-		const double enz = dz * rinv;
+		    double **v = atom->v;
+		    // calculate vn and vt since not in struct
+		    const double rinv = 1.0 / r;
+		    const double dx = scdata.delta[0];
+		    const double dy = scdata.delta[1];
+		    const double dz = scdata.delta[2];
+		    const double enx = dx * rinv;
+		    const double eny = dy * rinv;
+		    const double enz = dz * rinv;
 
-		// relative translational velocity
-		const double vr1 = v[i][0] - v[j][0];
-		const double vr2 = v[i][1] - v[j][1];
-		const double vr3 = v[i][2] - v[j][2];
+		    // relative translational velocity
+		    const double vr1 = v[i][0] - v[j][0];
+		    const double vr2 = v[i][1] - v[j][1];
+		    const double vr3 = v[i][2] - v[j][2];
 
-		// normal component
-		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+		    // normal component
+		    const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
 
-		double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
+        
+		    double F_lubrication = -6*M_PI*fluidViscosity*vn*rEff*rEff/d;
 
-		const double fx = F_lubrication * enx;    			//en represent the normal direction vector, enx is the x coordinate
-		const double fy = F_lubrication * eny;				 
-		const double fz = F_lubrication * enz;				 
+		    const double fx = F_lubrication * enx;    			//en represent the normal direction vector, enx is the x coordinate
+		    const double fy = F_lubrication * eny;				 
+		    const double fz = F_lubrication * enz;				
 
-		 // apply normal force
-		if(scdata.is_wall) {
-			i_forces.delta_F[0] += fx;
-			i_forces.delta_F[1] += fy;
-			i_forces.delta_F[2] += fz;
-		} else {
-			i_forces.delta_F[0] += fx;
-			i_forces.delta_F[1] += fy;
-			i_forces.delta_F[2] += fz;
+		     // apply normal force
+		    if(scdata.is_wall) {
+			    i_forces.delta_F[0] += fx;
+			    i_forces.delta_F[1] += fy;
+			    i_forces.delta_F[2] += fz;
+		    } else {
+			    i_forces.delta_F[0] += fx;
+			    i_forces.delta_F[1] += fy;
+			    i_forces.delta_F[2] += fz;
 
-			j_forces.delta_F[0] -= fx;
-			j_forces.delta_F[1] -= fy;
-			j_forces.delta_F[2] -= fz;
-	  }
+			    j_forces.delta_F[0] -= fx;
+			    j_forces.delta_F[1] -= fy;
+			    j_forces.delta_F[2] -= fz;
+	      }
+      }
+        else 
+        {
+            if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_COHESION_MODEL;
+        }
 	}
   
   private:
