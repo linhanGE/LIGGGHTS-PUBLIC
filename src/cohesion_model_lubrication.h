@@ -121,7 +121,28 @@ namespace ContactModels {
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-		if(sidata.contact_flags) *sidata.contact_flags &= ~CONTACT_COHESION_MODEL;
+		// in case deltan = 0 
+        if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;    
+
+        const double fx = 0;    			
+		const double fy = 0;
+		const double fz = 0;
+
+        if(sidata.is_wall) {
+			    i_forces.delta_F[0] += fx;
+			    i_forces.delta_F[1] += fy;
+			    i_forces.delta_F[2] += fz;
+		} else 
+        {
+			    i_forces.delta_F[0] += fx;
+			    i_forces.delta_F[1] += fy;
+			    i_forces.delta_F[2] += fz;
+
+			    j_forces.delta_F[0] -= fx;
+			    j_forces.delta_F[1] -= fy;
+			    j_forces.delta_F[2] -= fz;
+	    }
+
 	}
 
 	void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
@@ -141,8 +162,8 @@ namespace ContactModels {
         const double fluidViscosity = coeffMu[itype][jtype];
 
         bool lubrication = false;
-        if(!scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*(radi+radj)) lubrication =true;
-        else if (scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*radi) lubrication =true;
+        if(!scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*(radi+radj)) lubrication = true;
+        else if (scdata.is_wall && dist < (maxSeparationDistRatio-1.0)*radi) lubrication = true;
         
         if (lubrication) {
            
@@ -192,6 +213,7 @@ namespace ContactModels {
         else 
         {
             if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_COHESION_MODEL;
+            scdata.has_force_update = false;
         }
 	}
   
