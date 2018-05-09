@@ -7,3 +7,5 @@
 *.filters
 /lib/vtk
 desktop.ini
+*.o
+*.d

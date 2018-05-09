@@ -80,7 +80,7 @@ endef
 
 # Output check with echo
 ECHO := echo
-TMPFILE = /tmp/liggghtscompile.tmp
+TMPFILE = /tmp/myliggghtscompile.tmp
 TMP = $(shell $(ECHO) "\n" > $(TMPFILE) && cat $(TMPFILE))
 EMPTY =
 ifneq ($(TMP), $(EMPTY))

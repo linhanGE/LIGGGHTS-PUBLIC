@@ -269,8 +269,10 @@ public:
 	  #ifdef SUPERQUADRIC_ACTIVE_FLAG
 		  if(superquadric_flag) {
 			sidata.radi = cbrt(0.75 * atom->volume[i] / M_PI);
-		  } else
-			sidata.radi = radi;
+		  } else {
+			  sidata.radi = radi;
+			  sidata.densityi = densityi;
+		  }
 	  #else
 		  sidata.radi = radi;
 		  sidata.densityi = densityi;

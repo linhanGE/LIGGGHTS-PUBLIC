@@ -187,8 +187,6 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
-      const double radi = sidata.radi;
-      const double radj = sidata.radj;
 
       double meff=sidata.meff;
       double coeffRestLogChosen;
