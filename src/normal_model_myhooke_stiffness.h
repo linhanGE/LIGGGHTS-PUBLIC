@@ -237,7 +237,7 @@ namespace ContactModels
 	  double * const history = &sidata.contact_history[history_offset];   
 	  double st = 0;
 	  if(MathExtraLiggghts::compDouble(history[0],1.0,1e-6)) {
-		  history[1] = sidata.vn;
+		  history[1] = fabs(sidata.vn);
 	  // Izard etal. 2014
 		  st = (rhoi +  0.5*liquidDensity)*history[1]*2*radi/(9*fluidViscosity);
 	  }
