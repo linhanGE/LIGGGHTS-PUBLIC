@@ -740,7 +740,7 @@ void ComputePairGranLocal::add_wall_1(int iFMG,int idTri,int iP,double *contact_
 
 /* ---------------------------------------------------------------------- */
 
-void ComputePairGranLocal::add_wall_2(int i,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist,double deltan, double *normal)
+void ComputePairGranLocal::add_wall_2(int i,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist,double rsq, double *normal)
 {
     double contactArea;
 
@@ -849,14 +849,13 @@ void ComputePairGranLocal::add_wall_2(int i,double fx,double fy,double fz,double
     }
     if(areaflag)
     {
-        const double rsq = (atom->radius[i]-deltan)*(atom->radius[i]-deltan);
         contactArea = (atom->radius[i]*atom->radius[i]-rsq)*M_PI;
         array[ipair][n++] = contactArea;
         
     }
     if(deltaflag)
     {
-        array[ipair][n++] = deltan;
+        array[ipair][n++] = atom->radius[i]-sqrt(rsq);
 
     }
     if(msidflag)

@@ -85,8 +85,9 @@ namespace ContactModels
 	  dissipatedflag_(false),
 	  dissipation_history_offset_(0)
 	{
-	  history_offset = hsetup->add_history_value("impactV", "1");
-
+	  // history_offset = hsetup->add_history_value("impactV", "1");
+	  history_offset = hsetup->add_history_value("contflag", "0");
+      hsetup->add_history_value("impactVelocity", "1");
 	}
 
 	void registerSettings(Settings & settings)
@@ -231,13 +232,16 @@ namespace ContactModels
 	  kt /= force->nktv2p;
 	  
 	  // get impact velocity
-	  double * const impactVelocity = &sidata.contact_history[history_offset]; 
-	  const double  impactVn = fabs(impactVelocity[0]);
-
+	  /*double * const impactVelocity = &sidata.contact_history[history_offset]; 
+	  const double  impactVn = fabs(impactVelocity[0]);*/
+	  double * const history = &sidata.contact_history[history_offset];   
+	  double st = 0;
+	  if(MathExtraLiggghts::compDouble(history[0],1.0,1e-6)) {
+		  history[1] = sidata.vn;
 	  // Izard etal. 2014
-
-	  const double st = (rhoi +  0.5*liquidDensity)*impactVn*2*radi/(9*fluidViscosity);
-
+		  st = (rhoi +  0.5*liquidDensity)*history[1]*2*radi/(9*fluidViscosity);
+	  }
+	  
 	  if (st <= stc) {
 		 gamman = 2*sqrt(meff*kn);
 	  } else {
@@ -364,38 +368,54 @@ namespace ContactModels
 		j_forces.delta_F[1] += -i_forces.delta_F[1];
 		j_forces.delta_F[2] += -i_forces.delta_F[2];
 	  }
+	  
+	  // set the contact flag to 0
+	  history[0] = 0.0;                                              
 	}
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
 	{
+		
+		double * const history = &scdata.contact_history[history_offset];
+		history[0] = 1.0;
+		history[1] = 0.0;
+		
 		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
 
-		if(!scdata.contact_history)
+		/*if(!scdata.contact_history)
 		  return; //DO NOT access contact_history if not available
+        double * const impactVelocity = &scdata.contact_history[history_offset]; 
 
-		double * const impactVelocity = &scdata.contact_history[history_offset]; 
-		const int i = scdata.i;
-		const int j = scdata.j;
-		const double r = sqrt(scdata.rsq);
-					
-		double **v = atom->v;
-		// calculate vn and vt since not in struct
-		const double rinv = 1.0 / r;
-		const double dx = scdata.delta[0];
-		const double dy = scdata.delta[1];
-		const double dz = scdata.delta[2];
-		const double enx = dx * rinv;
-		const double eny = dy * rinv;
-		const double enz = dz * rinv;
+        if(scdata.is_wall) {
+		    const double rinv =  1.0/scdata.nonConr;
+		    const double enx = scdata.delta[0] * rinv;
+		    const double eny = scdata.delta[1] * rinv;
+		    const double enz = scdata.delta[2] * rinv;
+						
+		    const double vr1 = scdata.v_i[0] - scdata.v_j[0];
+		    const double vr2 = scdata.v_i[1] - scdata.v_j[1];
+		    const double vr3 = scdata.v_i[2] - scdata.v_j[2];
 
-		// relative translational velocity
-		const double vr1 = v[i][0] - v[j][0];
-		const double vr2 = v[i][1] - v[j][1];
-		const double vr3 = v[i][2] - v[j][2];
-
-		// normal component
-		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		impactVelocity[0] = vn;
+		    const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+		    impactVelocity[0] = vn;
+        }
+        if (!scdata.is_wall) {
+            const double rsq = scdata.rsq;
+		    const double r = sqrt(rsq);
+		    const double rinv =  1.0/r;
+            const double dx = scdata.delta[0];
+		    const double dy = scdata.delta[1];
+		    const double dz = scdata.delta[2];
+		    const double enx = dx * rinv;
+		    const double eny = dy * rinv;
+		    const double enz = dz * rinv;
+		    // relative translational velocity
+		    const double vr1 = scdata.v_i[0] - scdata.v_j[0];
+		    const double vr2 = scdata.v_i[1] - scdata.v_j[1];
+		    const double vr3 = scdata.v_i[2] - scdata.v_j[2];
+		    const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+            impactVelocity[0] = vn;
+        }*/
 	}
 
 	void beginPass(SurfacesIntersectData&, ForceData&, ForceData&){}
