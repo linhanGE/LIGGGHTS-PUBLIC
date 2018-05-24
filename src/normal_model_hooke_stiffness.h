@@ -49,6 +49,15 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #include "contact_models.h"
 #include "normal_model_base.h"
 
+namespace MODEL_PARAMS {
+
+	inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
+	  return beta_Scalar;
+	}
+}
+
 namespace LIGGGHTS {
 namespace ContactModels
 {
@@ -60,7 +69,12 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
+      coeffRestMax(NULL),
       coeffRestLog(NULL),
+      coeffMu(NULL),
+      beta(0.),
+      liquidDensity(0),
+      viscous(false),
       tangential_damping(false),
       limitForce(false),
       displayedSettings(false),
@@ -75,6 +89,7 @@ namespace ContactModels
 
     void registerSettings(Settings & settings)
     {
+      settings.registerOnOff("viscous", viscous,false);
       settings.registerOnOff("tangential_damping", tangential_damping, true);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
@@ -127,8 +142,21 @@ namespace ContactModels
       registry.connect("k_t", k_t,"model hooke/stiffness");
 
 
-      registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
-      registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness/viscous");
+      if(viscous) {
+        registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
+        registry.registerProperty("coeffRestMax", &MODEL_PARAMS::createCoeffRestMax);
+        registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
+        registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
+
+        registry.connect("coeffMu", coeffMu,"model hooke/stiffness viscous");
+        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness viscous");
+        registry.connect("liquidDensity", liquidDensity,"model hooke/stiffness viscous");
+        registry.connect("beta", beta,"model hooke/stiffness viscous");
+      } else {
+        registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
+
+        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness viscous");
+      }
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -187,20 +215,30 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
+      const double radi = sidata.radi;
+      const double radj = sidata.radj;
+      const double rhoi = sidata.densityi;
+      double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
 
       double meff=sidata.meff;
       double coeffRestLogChosen;
-
-      double kn = k_n[itype][jtype];
-      double kt = k_t[itype][jtype];
 
       if(!displayedSettings)
       {
         displayedSettings = true;
       }
 
-      coeffRestLogChosen=coeffRestLog[itype][jtype];
+      if (viscous)  {
+         const double stokes = (rhoi +  0.5*liquidDensity)*fabs(sidata.vn)*2*radi/(9*coeffMu[itype][jtype]);
+         // Empirical from Legendre (2006)
+         coeffRestLogChosen=log(coeffRestMax[itype][jtype])-beta/stokes;
+      } else {
+         coeffRestLogChosen=coeffRestLog[itype][jtype];
+      }
+      
 
+      double kn = k_n[itype][jtype];
+      double kt = k_t[itype][jtype];
       const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
       const double gamman=sqrt(4.*meff*kn*coeffRestLogChosenSq/(coeffRestLogChosenSq+M_PI*M_PI));
       const double gammat = tangential_damping ? gamman : 0.0;
@@ -356,8 +394,12 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
+    double ** coeffRestMax;
     double ** coeffRestLog;
-
+    double ** coeffMu;
+    double beta;
+    double liquidDensity;
+    bool viscous;
     bool tangential_damping;
     bool limitForce;
     bool displayedSettings;
