@@ -87,7 +87,7 @@ namespace ContactModels
 	{
 	  // history_offset = hsetup->add_history_value("impactV", "1");
 	  history_offset = hsetup->add_history_value("contflag", "0");
-      hsetup->add_history_value("impactVelocity", "1");
+	  hsetup->add_history_value("st", "1");
 	}
 
 	void registerSettings(Settings & settings)
@@ -234,19 +234,23 @@ namespace ContactModels
 	  // get impact velocity
 	  /*double * const impactVelocity = &sidata.contact_history[history_offset]; 
 	  const double  impactVn = fabs(impactVelocity[0]);*/
-	  double * const history = &sidata.contact_history[history_offset];   
-	  double st = 0;
+	  double * const history = &sidata.contact_history[history_offset];
+	  
 	  if(MathExtraLiggghts::compDouble(history[0],1.0,1e-6)) {
-		  history[1] = fabs(sidata.vn);
-	  // Izard etal. 2014
-		  st = (rhoi +  0.5*liquidDensity)*history[1]*2*radi/(9*fluidViscosity);
+		  // Izard etal. 2014
+		  history[1] = (rhoi +  0.5*liquidDensity)*fabs(sidata.vn)*2*radi/(9*fluidViscosity);
 	  }
+	  
+	  // set the contact flag to 0
+	  history[0] = 0.0;
+	  
+	  const double st =  history[1];
 	  
 	  if (st <= stc) {
 		 gamman = 2*sqrt(meff*kn);
 	  } else {
          // Eq. 3.13
-		 const double ewet = edry*(1-stc/st)*exp(-0.5*M_PI/sqrt(st-stc));     
+		 const double ewet = fabs(edry*(1-stc/st)*exp(-0.5*M_PI/sqrt(fabs(st-stc))));     
 		 gamman=sqrt(4.*meff*kn*log(ewet)*log(ewet)/(log(ewet)*log(ewet)+M_PI*M_PI));
 	  }
 
@@ -369,8 +373,6 @@ namespace ContactModels
 		j_forces.delta_F[2] += -i_forces.delta_F[2];
 	  }
 	  
-	  // set the contact flag to 0
-	  history[0] = 0.0;                                              
 	}
 
 	void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
@@ -378,7 +380,7 @@ namespace ContactModels
 		
 		double * const history = &scdata.contact_history[history_offset];
 		history[0] = 1.0;
-		history[1] = 0.0;
+		history[1] = 1e-6;
 		
 		if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
 

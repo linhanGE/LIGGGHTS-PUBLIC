@@ -844,10 +844,13 @@ void ComputePairGranLocal::add_wall_2(int i,double fx,double fy,double fz,double
     }
     if(histflag)
     {
-        for(int d = 0; d < dnum; d++)
+        for(int d = 0; d < dnum; d++) {
            array[ipair][n++] = hist[d];
-    }
-    if(areaflag)
+           // fprintf(logfile,"hist[%i] = %f \n",d, hist[d]);
+        }
+        // fprintf(logfile,"dnum =  %i\n",dnum);
+     }
+     if(areaflag)
     {
         contactArea = (atom->radius[i]*atom->radius[i]-rsq)*M_PI;
         array[ipair][n++] = contactArea;

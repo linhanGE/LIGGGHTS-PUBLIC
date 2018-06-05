@@ -48,6 +48,7 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #define NORMAL_MODEL_HOOKE_STIFFNESS_H_
 #include "contact_models.h"
 #include "normal_model_base.h"
+#include "math_extra_liggghts.h"
 
 namespace MODEL_PARAMS {
 
@@ -75,6 +76,7 @@ namespace ContactModels
       beta(0.),
       liquidDensity(0),
       viscous(false),
+	  history_offset(0),
       tangential_damping(false),
       limitForce(false),
       displayedSettings(false),
@@ -84,7 +86,8 @@ namespace ContactModels
       dissipatedflag_(false),
       dissipation_history_offset_(0)
     {
-      
+      history_offset = hsetup->add_history_value("contflag", "0");
+	  hsetup->add_history_value("contactCounter", "0");
     }
 
     void registerSettings(Settings & settings)
@@ -117,7 +120,7 @@ namespace ContactModels
                     hsetup->add_history_value("elastic_potential_wall", "0");
                 cmb->add_history_offset("elastic_potential_normal", elastic_potential_offset_);
             }
-        }
+        } 
         if (dissipatedflag_)
         {
             if (cmb->is_wall())
@@ -161,7 +164,9 @@ namespace ContactModels
       // error checks on coarsegraining
       if(force->cg_active())
         error->cg(FLERR,"model hooke/stiffness");
-
+      
+	  neighbor->register_contact_dist_factor(1.1);
+	  
       // enlarge contact distance flag in case of elastic energy computation
       // to ensure that surfaceClose is called after a contact
       if (elasticpotflag_)
@@ -235,8 +240,24 @@ namespace ContactModels
       } else {
          coeffRestLogChosen=coeffRestLog[itype][jtype];
       }
+	     
+      // because this normal model will be called twice in one collision, will be called for the third time if there is comptute_pair_gran_local
+      double * const history = &sidata.contact_history[history_offset];
       
+	  if (MathExtraLiggghts::compDouble(history[0],0,1e-6)) {
+          history[1] = 1;
+       } else history[1] = 0;
+       
+       history[0] = 1;
 
+    //    printf("calculating \n");
+
+      /*if (sidata.is_wall) {
+         printf("%s \n","calculating");
+         fprintf(logfile,"hitory[0] = %f\n",history[0]);
+         fprintf(logfile,"hitory[1] = %f\n",history[1]);
+      }*/
+           
       double kn = k_n[itype][jtype];
       double kt = k_t[itype][jtype];
       const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
@@ -273,7 +294,7 @@ namespace ContactModels
             vectorCross3D(xci, Fn_i, torque_i);
           }
       #endif
-
+      
       // energy balance terms
       if (update_history)
       {
@@ -338,7 +359,7 @@ namespace ContactModels
               error->one(FLERR, "Dissipation and elastic potential do not compute torque influence for nonspherical particles");
           #endif
       }
-
+      
       // apply normal force
       if(sidata.is_wall) {
         const double Fn_ = Fn * sidata.area_ratio;
@@ -380,10 +401,14 @@ namespace ContactModels
         #endif
       }
     }
-
+    
     void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
     {
-        if (scdata.contact_flags)
+        double * const history = &scdata.contact_history[history_offset];
+        history[0] = 0;
+		history[1] = 0;
+		
+		if (scdata.contact_flags)
             *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
         dissipateElasticPotential(scdata);
     }
@@ -400,6 +425,7 @@ namespace ContactModels
     double beta;
     double liquidDensity;
     bool viscous;
+	int history_offset;
     bool tangential_damping;
     bool limitForce;
     bool displayedSettings;
