@@ -241,14 +241,14 @@ namespace ContactModels
          coeffRestLogChosen=coeffRestLog[itype][jtype];
       }
 	     
-      // because this normal model will be called twice in one collision, will be called for the third time if there is comptute_pair_gran_local
+      // because this normal model will be called during collision, will be called for another time if there is comptute_pair_gran_local
       double * const history = &sidata.contact_history[history_offset];
-      
-	  if (MathExtraLiggghts::compDouble(history[0],0,1e-6)) {
+      if (update_history) {
+         if (MathExtraLiggghts::compDouble(history[0],0,1e-6)) {
           history[1] = 1;
        } else history[1] = 0;
-       
-       history[0] = 1;
+      }
+	     history[0] = 1;
 
     //    printf("calculating \n");
 
