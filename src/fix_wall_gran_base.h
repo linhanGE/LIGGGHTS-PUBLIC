@@ -179,6 +179,7 @@ public:
     sidata.v_j = vwall;
     sidata.omega_i = omega;
 	sidata.densityi = rhoi;
+	sidata.zi =  x[2];
 
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
 	sidata.nonConr = sidata.radi + sidata.nonConDeltan;

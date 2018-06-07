@@ -276,6 +276,7 @@ public:
 	  #else
 		  sidata.radi = radi;
 		  sidata.densityi = densityi;
+		  sidata.zi       = ztmp;
 	  #endif
 
 	  for (int jj = 0; jj < jnum; jj++) {
@@ -320,8 +321,7 @@ public:
 		sidata.delta[0] = delx;
 		sidata.delta[1] = dely;
 		sidata.delta[2] = delz;
-		sidata.zi       = x[i][2];
-		sidata.zj       = x[j][2];
+     	sidata.zj       = x[j][2];
 		sidata.rsq = rsq;
 		sidata.densityj = densityj;
 		sidata.radsum = radsum;

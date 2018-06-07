@@ -57,6 +57,16 @@ namespace MODEL_PARAMS {
 	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
 	  return beta_Scalar;
 	}
+    inline static ScalarProperty* createZHighMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* zHigh_Scalar = MODEL_PARAMS::createScalarProperty(registry, "zHigh", caller);
+	  return zHigh_Scalar;
+	}
+    inline static ScalarProperty* createZLowMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* zLow_Scalar = MODEL_PARAMS::createScalarProperty(registry, "zLow", caller);
+	  return zLow_Scalar;
+	}
 }
 
 namespace LIGGGHTS {
@@ -74,6 +84,8 @@ namespace ContactModels
       coeffRestLog(NULL),
       coeffMu(NULL),
       beta(0.),
+      zHigh(0),
+      zLow(0),
       liquidDensity(0),
       viscous(false),
 	  history_offset(0),
@@ -87,7 +99,8 @@ namespace ContactModels
       dissipation_history_offset_(0)
     {
       history_offset = hsetup->add_history_value("contflag", "0");
-	  hsetup->add_history_value("contactCounter", "0");
+      hsetup->add_history_value("contactCounter", "0");
+      hsetup->add_history_value("st", "0");
     }
 
     void registerSettings(Settings & settings)
@@ -140,10 +153,13 @@ namespace ContactModels
     void connectToProperties(PropertyRegistry & registry) {
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
+      registry.registerProperty("zHigh", &MODEL_PARAMS::createZHighMHS);
+      registry.registerProperty("zLow", &MODEL_PARAMS::createZLowMHS);
 
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
-
+      registry.connect("zHigh", zHigh,"model hooke/stiffness");
+      registry.connect("zLow", zLow,"model hooke/stiffness");
 
       if(viscous) {
         registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
@@ -151,14 +167,14 @@ namespace ContactModels
         registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
         registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
 
-        registry.connect("coeffMu", coeffMu,"model hooke/stiffness viscous");
-        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness viscous");
-        registry.connect("liquidDensity", liquidDensity,"model hooke/stiffness viscous");
-        registry.connect("beta", beta,"model hooke/stiffness viscous");
+        registry.connect("coeffMu", coeffMu,"model hooke/stiffness");
+        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness");
+        registry.connect("liquidDensity", liquidDensity,"model hooke/stiffness");
+        registry.connect("beta", beta,"model hooke/stiffness");
       } else {
         registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
 
-        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness viscous");
+        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness");
       }
 
       // error checks on coarsegraining
@@ -221,9 +237,9 @@ namespace ContactModels
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
       const double radi = sidata.radi;
-      const double radj = sidata.radj;
       const double rhoi = sidata.densityi;
-      double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
+      const double zi = sidata.zi;
+      // double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
 
       double meff=sidata.meff;
       double coeffRestLogChosen;
@@ -232,28 +248,35 @@ namespace ContactModels
       {
         displayedSettings = true;
       }
+     
+      // The normal model will be called during collision, 
+      // and will be called for another time if there is comptute_pair_gran_local.
 
-      if (viscous)  {
-         const double stokes = (rhoi +  0.5*liquidDensity)*fabs(sidata.vn)*2*radi/(9*coeffMu[itype][jtype]);
-         // Empirical from Legendre (2006)
-         coeffRestLogChosen=log(coeffRestMax[itype][jtype])-beta/stokes;
-      } else {
-         coeffRestLogChosen=coeffRestLog[itype][jtype];
-      }
-	     
-      // because this normal model will be called during collision, will be called for another time if there is comptute_pair_gran_local
       double * const history = &sidata.contact_history[history_offset];
       if (update_history) {
-         if (MathExtraLiggghts::compDouble(history[0],0,1e-6)) {
+         if (MathExtraLiggghts::compDouble(history[0],0,1e-6) && zi >= zLow && zi <= zHigh ) {
           history[1] = 1;
        } else history[1] = 0;
       }
-	     history[0] = 1;
+	     
+	  history[0] = 1;
+	  
+	  printf("calculating \n");
+	  fprintf(logfile,"zi = %f\n",zi);
+	   
+      if (viscous)  {
+		// calculate stokes number based on the impact velocity  
+		if (MathExtraLiggghts::compDouble(history[1],1,1e-6))
+            history[2] = (rhoi +  0.5*liquidDensity)*fabs(sidata.vn)*2*radi/(9*coeffMu[itype][jtype]);
+         // Empirical from Legendre (2006)
+          coeffRestLogChosen = log(coeffRestMax[itype][jtype]) - beta / history[2];
+      } else {
+          coeffRestLogChosen = coeffRestLog[itype][jtype];
+      }
 
-    //    printf("calculating \n");
+     // printf("calculating \n");
 
       /*if (sidata.is_wall) {
-         printf("%s \n","calculating");
          fprintf(logfile,"hitory[0] = %f\n",history[0]);
          fprintf(logfile,"hitory[1] = %f\n",history[1]);
       }*/
@@ -407,6 +430,7 @@ namespace ContactModels
         double * const history = &scdata.contact_history[history_offset];
         history[0] = 0;
 		history[1] = 0;
+        history[2] = 0;
 		
 		if (scdata.contact_flags)
             *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
@@ -423,6 +447,7 @@ namespace ContactModels
     double ** coeffRestLog;
     double ** coeffMu;
     double beta;
+    double zHigh,zLow;
     double liquidDensity;
     bool viscous;
 	int history_offset;
