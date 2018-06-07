@@ -321,7 +321,7 @@ public:
 		sidata.delta[0] = delx;
 		sidata.delta[1] = dely;
 		sidata.delta[2] = delz;
-     	sidata.zj       = x[j][2];
+        sidata.zj       = x[j][2];
 		sidata.rsq = rsq;
 		sidata.densityj = densityj;
 		sidata.radsum = radsum;

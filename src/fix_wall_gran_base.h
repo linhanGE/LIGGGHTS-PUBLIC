@@ -154,7 +154,7 @@ public:
     double *torque = atom->torque[ip];
     double *v = atom->v[ip];
     double *omega = atom->omega[ip];
-	double rhoi = atom->density[ip];
+	  double rhoi = atom->density[ip];
     double mass = atom->rmass[ip];
     int *type = atom->type;
 

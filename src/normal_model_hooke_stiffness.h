@@ -49,6 +49,7 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #include "contact_models.h"
 #include "normal_model_base.h"
 #include "math_extra_liggghts.h"
+// #include <iostream>
 
 namespace MODEL_PARAMS {
 
@@ -238,9 +239,11 @@ namespace ContactModels
       const int jtype = sidata.jtype;
       const double radi = sidata.radi;
       const double rhoi = sidata.densityi;
-      const double zi = sidata.zi;
-      // double reff=sidata.is_wall ? radi : (radi*radj/(radi+radj));
-
+      
+      const int i = sidata.i;
+      double **x = atom->x;
+      double zi = x[i][2];
+      
       double meff=sidata.meff;
       double coeffRestLogChosen;
 
@@ -256,14 +259,12 @@ namespace ContactModels
       if (update_history) {
          if (MathExtraLiggghts::compDouble(history[0],0,1e-6) && zi >= zLow && zi <= zHigh ) {
           history[1] = 1;
-       } else history[1] = 0;
+		 }
+		 else history[1] = 0;
       }
 	     
 	  history[0] = 1;
-	  
-	  printf("calculating \n");
-	  fprintf(logfile,"zi = %f\n",zi);
-	   
+	  	   
       if (viscous)  {
 		// calculate stokes number based on the impact velocity  
 		if (MathExtraLiggghts::compDouble(history[1],1,1e-6))
@@ -273,13 +274,6 @@ namespace ContactModels
       } else {
           coeffRestLogChosen = coeffRestLog[itype][jtype];
       }
-
-     // printf("calculating \n");
-
-      /*if (sidata.is_wall) {
-         fprintf(logfile,"hitory[0] = %f\n",history[0]);
-         fprintf(logfile,"hitory[1] = %f\n",history[1]);
-      }*/
            
       double kn = k_n[itype][jtype];
       double kt = k_t[itype][jtype];
