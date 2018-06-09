@@ -358,8 +358,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 		}
 	}
 
-	if(impl)
-	  impl->settings(narg - iarg_, &arg[iarg_], this);
+	if (impl)
+		impl->settings(narg - iarg_, &arg[iarg_], this);
 
 	// error checks
 

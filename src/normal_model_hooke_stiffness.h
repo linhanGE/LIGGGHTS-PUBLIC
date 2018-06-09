@@ -382,7 +382,7 @@ namespace ContactModels
         const double Fn_ = Fn * sidata.area_ratio;
         i_forces.delta_F[0] += Fn_ * sidata.en[0];
         i_forces.delta_F[1] += Fn_ * sidata.en[1];
-        i_forces.delta_F[2] += Fn_ * sidata.en[2];
+		i_forces.delta_F[2] += Fn_ * sidata.en[2];
         #ifdef NONSPHERICAL_ACTIVE_FLAG
                 if(sidata.is_non_spherical) {
                   //for non-spherical particles normal force can produce torque!

@@ -102,7 +102,7 @@ FixSPHPressure::FixSPHPressure(LAMMPS *lmp, int narg, char **arg) :
     {
       if (narg < iarg+3) error->fix_error(FLERR,this,"Not enough arguments for 'relativ' pressure style \n");
       B = force->numeric(FLERR,arg[iarg+1]);
-      rho0 = force->numeric(FLERR,arg[iarg+2]);
+	  rho0 = force->numeric(FLERR, arg[iarg + 2]);
       if (narg < iarg+4)
       {
         P0 = 0;
