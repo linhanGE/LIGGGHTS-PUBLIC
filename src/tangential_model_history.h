@@ -52,6 +52,7 @@ TANGENTIAL_MODEL(TANGENTIAL_HISTORY,history,2)
 #include "update.h"
 #include "global_properties.h"
 #include "atom.h"
+#include "math_extra_liggghts.h"
 
 namespace LIGGGHTS {
 namespace ContactModels
@@ -78,7 +79,6 @@ namespace ContactModels
         history_offset = hsetup->add_history_value("shearx", "1");
         hsetup->add_history_value("sheary", "1");
         hsetup->add_history_value("shearz", "1");
-
     }
 
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb)
@@ -127,7 +127,8 @@ namespace ContactModels
         }
     }
 
-    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
+    // inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
+	inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
         // normal forces = Hookian contact + normal velocity damping
         const double enx = sidata.en[0];
@@ -175,6 +176,8 @@ namespace ContactModels
         const double Ft_friction = xmu * fabs(sidata.Fn);
 
         // energy loss from sliding or damping
+		bool solidContact = false;
+
         if (Ft_shear > Ft_friction) {
           if (shrmag != 0.0) {
             const double ratio = Ft_friction / Ft_shear;
@@ -191,7 +194,8 @@ namespace ContactModels
             Ft1 *= ratio;
             Ft2 *= ratio;
             Ft3 *= ratio;
-            
+
+			
             if (update_history)
             {
                 shear[0] = -Ft1/kt;
@@ -211,6 +215,7 @@ namespace ContactModels
         }
         else
         {
+		  solidContact = true;  //  not a "fluid" contact, Ft > muFn
           const double gammat = sidata.gammat;
           Ft1 -= (gammat*sidata.vtr1);
           Ft2 -= (gammat*sidata.vtr2);
@@ -225,6 +230,11 @@ namespace ContactModels
                   cmb->tally_pp(P_diss_local, sidata.i, sidata.j, 1);
           }
         }
+
+		if (solidContact) {
+			sidata.stress_i = 0;
+			sidata.stress_j = 0;
+		}
 
         // forces & torques
         const double tor1 = eny * Ft3 - enz * Ft2;

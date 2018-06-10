@@ -809,7 +809,9 @@ void PairGran::cpl_add_pair(LCM::SurfacesIntersectData & sidata, LCM::ForceData 
 #else
         NULL;
 #endif
-    cpl_->add_pair(sidata.i, sidata.j, fx,fy,fz,tor1,tor2,tor3,sidata.contact_history, contact_point);
+	const double stress = sidata.stress_i + sidata.stress_j;
+
+    cpl_->add_pair(sidata.i, sidata.j, fx,fy,fz,tor1,tor2,tor3,sidata.contact_history, contact_point, stress);
 }
 
 void PairGran::cpl_pair_finalize()

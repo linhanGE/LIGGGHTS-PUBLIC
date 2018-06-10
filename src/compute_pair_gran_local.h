@@ -70,7 +70,7 @@ class ComputePairGranLocal : public Compute {
   void compute_local();
   double memory_usage();
   void reference_deleted();
-  virtual void add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point);
+  virtual void add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point, double stress);
   virtual void add_heat(int i,int j,double hf);
   virtual void add_wall_1(int iFMG,int iTri,int iP,double *contact_point,double *v_wall);
   virtual void add_wall_2(int i,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist,double deltan, double *normal_);
@@ -184,7 +184,7 @@ class ComputePairGranLocal : public Compute {
 
   int ipair;
 
-  int posflag,velflag,idflag,fflag,fnflag,ftflag,torqueflag,torquenflag,torquetflag,histflag,areaflag,deltaflag,heatflag,cpflag,msidflag;
+  int posflag,velflag,idflag,fflag,fnflag,ftflag,torqueflag,torquenflag,torquetflag,histflag,areaflag,deltaflag,heatflag,cpflag,msidflag,stress;
 
   bool   verbose;
 

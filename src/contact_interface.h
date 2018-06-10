@@ -94,6 +94,12 @@ struct SurfacesCloseData {
   double * omega_i;
   double * omega_j;
 
+  double virial_i;
+  double virial_j;
+
+  double stress_i;
+  double stress_j;
+
   bool is_non_spherical;
 
 #ifdef NONSPHERICAL_ACTIVE_FLAG
@@ -121,11 +127,15 @@ struct SurfacesCloseData {
     j(0),
     itype(0),
     jtype(0),
+	virial_i(0.0),
+	virial_j(0.0),
+	stress_i(0.0),
+	stress_j(0.0),
     is_wall(false),
     has_force_update(false),
     v_i(NULL),
     v_j(NULL),
-    omega_i(NULL),
+	omega_i(NULL),
     omega_j(NULL),
     is_non_spherical(false),
 #ifdef SUPERQUADRIC_ACTIVE_FLAG

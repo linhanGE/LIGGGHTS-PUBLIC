@@ -48,27 +48,6 @@ NORMAL_MODEL(HOOKE_STIFFNESS,hooke/stiffness,1)
 #define NORMAL_MODEL_HOOKE_STIFFNESS_H_
 #include "contact_models.h"
 #include "normal_model_base.h"
-#include "math_extra_liggghts.h"
-// #include <iostream>
-
-namespace MODEL_PARAMS {
-
-	inline static ScalarProperty* createBetaMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* beta_Scalar = MODEL_PARAMS::createScalarProperty(registry, "beta", caller);
-	  return beta_Scalar;
-	}
-    inline static ScalarProperty* createZHighMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* zHigh_Scalar = MODEL_PARAMS::createScalarProperty(registry, "zHigh", caller);
-	  return zHigh_Scalar;
-	}
-    inline static ScalarProperty* createZLowMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-	{
-	  ScalarProperty* zLow_Scalar = MODEL_PARAMS::createScalarProperty(registry, "zLow", caller);
-	  return zLow_Scalar;
-	}
-}
 
 namespace LIGGGHTS {
 namespace ContactModels
@@ -81,16 +60,10 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
-      coeffRestMax(NULL),
-      coeffRestLog(NULL),
-      coeffMu(NULL),
-      beta(0.),
-      zHigh(0),
-      zLow(0),
-      liquidDensity(0),
-      viscous(false),
-	  history_offset(0),
+      gamma_n(NULL),
+      gamma_t(NULL),
       tangential_damping(false),
+      absolute_damping(false),
       limitForce(false),
       displayedSettings(false),
       elastic_potential_offset_(0),
@@ -99,15 +72,13 @@ namespace ContactModels
       dissipatedflag_(false),
       dissipation_history_offset_(0)
     {
-      history_offset = hsetup->add_history_value("contflag", "0");
-      hsetup->add_history_value("contactCounter", "0");
-      hsetup->add_history_value("st", "0");
+      
     }
 
     void registerSettings(Settings & settings)
     {
-      settings.registerOnOff("viscous", viscous,false);
       settings.registerOnOff("tangential_damping", tangential_damping, true);
+      settings.registerOnOff("absolute_damping", absolute_damping);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
       settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -134,7 +105,7 @@ namespace ContactModels
                     hsetup->add_history_value("elastic_potential_wall", "0");
                 cmb->add_history_offset("elastic_potential_normal", elastic_potential_offset_);
             }
-        } 
+        }
         if (dissipatedflag_)
         {
             if (cmb->is_wall())
@@ -154,41 +125,31 @@ namespace ContactModels
     void connectToProperties(PropertyRegistry & registry) {
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
-      registry.registerProperty("zHigh", &MODEL_PARAMS::createZHighMHS);
-      registry.registerProperty("zLow", &MODEL_PARAMS::createZLowMHS);
 
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
-      registry.connect("zHigh", zHigh,"model hooke/stiffness");
-      registry.connect("zLow", zLow,"model hooke/stiffness");
 
-      if(viscous) {
-        registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
-        registry.registerProperty("coeffRestMax", &MODEL_PARAMS::createCoeffRestMax);
-        registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
-        registry.registerProperty("beta", &MODEL_PARAMS::createBetaMHS);
-
-        registry.connect("coeffMu", coeffMu,"model hooke/stiffness");
-        registry.connect("coeffRestMax", coeffRestMax,"model hooke/stiffness");
-        registry.connect("liquidDensity", liquidDensity,"model hooke/stiffness");
-        registry.connect("beta", beta,"model hooke/stiffness");
+      if(absolute_damping) {
+        registry.registerProperty("gamman_abs", &MODEL_PARAMS::createGammanAbs);
+        registry.registerProperty("gammat_abs", &MODEL_PARAMS::createGammatAbs);
+        registry.connect("gamman_abs", gamma_n,"model hooke/stiffness");
+        registry.connect("gammat_abs", gamma_t,"model hooke/stiffness");
       } else {
-        registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
-
-        registry.connect("coeffRestLog", coeffRestLog,"model hooke/stiffness");
+        registry.registerProperty("gamman", &MODEL_PARAMS::createGamman);
+        registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
+        registry.connect("gamman", gamma_n,"model hooke/stiffness");
+        registry.connect("gammat", gamma_t,"model hooke/stiffness");
       }
 
       // error checks on coarsegraining
       if(force->cg_active())
         error->cg(FLERR,"model hooke/stiffness");
-      
-	  neighbor->register_contact_dist_factor(1.1);
-	  
+
       // enlarge contact distance flag in case of elastic energy computation
       // to ensure that surfaceClose is called after a contact
       if (elasticpotflag_)
           //set neighbor contact_distance_factor here
-          neighbor->register_contact_dist_factor(1.1);
+          neighbor->register_contact_dist_factor(1.01);
     }
 
     // effective exponent for stress-strain relationship
@@ -237,49 +198,33 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
-      const double radi = sidata.radi;
-      const double rhoi = sidata.densityi;
-      
-      const int i = sidata.i;
-      double **x = atom->x;
-      double zi = x[i][2];
-      
       double meff=sidata.meff;
-      double coeffRestLogChosen;
+
+      double kn = k_n[itype][jtype];
+      double kt = k_t[itype][jtype];
+      double gamman, gammat;
 
       if(!displayedSettings)
       {
         displayedSettings = true;
-      }
-     
-      // The normal model will be called during collision, 
-      // and will be called for another time if there is comptute_pair_gran_local.
 
-      double * const history = &sidata.contact_history[history_offset];
-      if (update_history) {
-         if (MathExtraLiggghts::compDouble(history[0],0,1e-6) && zi >= zLow && zi <= zHigh ) {
-          history[1] = 1;
-		 }
-		 else history[1] = 0;
+        /*
+        if(limitForce)
+            if(0 == comm->me) fprintf(screen," NormalModel<HOOKE_STIFFNESS>: will limit normal force.\n");
+        */
       }
-	     
-	  history[0] = 1;
-	  	   
-      if (viscous)  {
-		// calculate stokes number based on the impact velocity  
-		if (MathExtraLiggghts::compDouble(history[1],1,1e-6))
-            history[2] = (rhoi +  0.5*liquidDensity)*fabs(sidata.vn)*2*radi/(9*coeffMu[itype][jtype]);
-         // Empirical from Legendre (2006)
-          coeffRestLogChosen = log(coeffRestMax[itype][jtype]) - beta / history[2];
-      } else {
-          coeffRestLogChosen = coeffRestLog[itype][jtype];
+      if(absolute_damping)
+      {
+        gamman = gamma_n[itype][jtype];
+        gammat = gamma_t[itype][jtype];
       }
-           
-      double kn = k_n[itype][jtype];
-      double kt = k_t[itype][jtype];
-      const double coeffRestLogChosenSq = coeffRestLogChosen*coeffRestLogChosen;
-      const double gamman=sqrt(4.*meff*kn*coeffRestLogChosenSq/(coeffRestLogChosenSq+M_PI*M_PI));
-      const double gammat = tangential_damping ? gamman : 0.0;
+      else
+      {
+        gamman = meff*gamma_n[itype][jtype];
+        gammat = meff*gamma_t[itype][jtype];
+      }
+
+      if (!tangential_damping) gammat = 0.0;
 
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
@@ -311,7 +256,7 @@ namespace ContactModels
             vectorCross3D(xci, Fn_i, torque_i);
           }
       #endif
-      
+
       // energy balance terms
       if (update_history)
       {
@@ -376,13 +321,13 @@ namespace ContactModels
               error->one(FLERR, "Dissipation and elastic potential do not compute torque influence for nonspherical particles");
           #endif
       }
-      
+
       // apply normal force
       if(sidata.is_wall) {
         const double Fn_ = Fn * sidata.area_ratio;
         i_forces.delta_F[0] += Fn_ * sidata.en[0];
         i_forces.delta_F[1] += Fn_ * sidata.en[1];
-		i_forces.delta_F[2] += Fn_ * sidata.en[2];
+        i_forces.delta_F[2] += Fn_ * sidata.en[2];
         #ifdef NONSPHERICAL_ACTIVE_FLAG
                 if(sidata.is_non_spherical) {
                   //for non-spherical particles normal force can produce torque!
@@ -418,15 +363,10 @@ namespace ContactModels
         #endif
       }
     }
-    
+
     void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
     {
-        double * const history = &scdata.contact_history[history_offset];
-        history[0] = 0;
-		history[1] = 0;
-        history[2] = 0;
-		
-		if (scdata.contact_flags)
+        if (scdata.contact_flags)
             *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
         dissipateElasticPotential(scdata);
     }
@@ -437,15 +377,11 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
-    double ** coeffRestMax;
-    double ** coeffRestLog;
-    double ** coeffMu;
-    double beta;
-    double zHigh,zLow;
-    double liquidDensity;
-    bool viscous;
-	int history_offset;
+    double ** gamma_n;
+    double ** gamma_t;
+
     bool tangential_damping;
+    bool absolute_damping;
     bool limitForce;
     bool displayedSettings;
     int elastic_potential_offset_;
