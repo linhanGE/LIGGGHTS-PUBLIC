@@ -61,7 +61,7 @@ class TangentialModelBase : protected Pointers
     virtual void registerSettings(Settings& settings) = 0;
     virtual void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) = 0;
     virtual void connectToProperties(PropertyRegistry&) = 0;
-    virtual void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces) = 0;
+    virtual void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces) = 0;
     virtual void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&) = 0;
     virtual void beginPass(SurfacesIntersectData&, ForceData&, ForceData&) = 0;
     virtual void endPass(SurfacesIntersectData&, ForceData&, ForceData&) = 0;
@@ -76,7 +76,7 @@ class TangentialModelBase : protected Pointers
     inline void endPass(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
     inline void registerSettings(Settings & settings);
     inline void connectToProperties(PropertyRegistry & registry);
-    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
+    inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
     inline void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces);
   };
 
@@ -89,7 +89,7 @@ class TangentialModelBase : protected Pointers
     void endPass(SurfacesIntersectData&, ForceData&, ForceData&){}
     void connectToProperties(PropertyRegistry&){}
     void registerSettings(Settings&){}
-    void surfacesIntersect(const SurfacesIntersectData&, ForceData&, ForceData&){}
+    void surfacesIntersect(SurfacesIntersectData&, ForceData&, ForceData&){}
     void surfacesClose(SurfacesCloseData&, ForceData&, ForceData&){}
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
   };
