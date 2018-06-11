@@ -87,15 +87,15 @@ namespace LIGGGHTS {
 				NormalModelBase(lmp, hsetup, c),
 				k_n(NULL),
 				k_t(NULL),
-				coeffRestMax(NULL),
+				// coeffRestMax(NULL),
 				coeffRestLog(NULL),
-				coeffMu(NULL),
-				beta(0.),
+				// coeffMu(NULL),
+				// beta(0.),
 				zHigh(0),
 				zLow(0),
 				tc(0),
-				liquidDensity(0),
-				viscous(false),
+				// liquidDensity(0),
+				// viscous(false),
 				history_offset(0),
 				tangential_damping(false),
 				limitForce(false),
@@ -108,12 +108,12 @@ namespace LIGGGHTS {
 			{
 				history_offset = hsetup->add_history_value("contactCounter", "0");
 				hsetup->add_history_value("firstContactIndicator", "0");
-				hsetup->add_history_value("st", "0");
+				// hsetup->add_history_value("st", "0");
 			}
 
 			void registerSettings(Settings & settings)
 			{
-				settings.registerOnOff("viscous", viscous, false);
+				// settings.registerOnOff("viscous", viscous, false);
 				settings.registerOnOff("tangential_damping", tangential_damping, true);
 				settings.registerOnOff("limitForce", limitForce);
 				settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
@@ -171,7 +171,7 @@ namespace LIGGGHTS {
 				registry.connect("zLow", zLow, "model myhooke/stiffness");
 				registry.connect("tc", tc, "model myhooke/stiffness");
 
-				if (viscous) {
+				/*if (viscous) {
 					registry.registerProperty("coeffMu", &MODEL_PARAMS::createCoeffMu);
 					registry.registerProperty("coeffRestMax", &MODEL_PARAMS::createCoeffRestMax);
 					registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
@@ -186,7 +186,7 @@ namespace LIGGGHTS {
 					registry.registerProperty("coeffRestLog", &MODEL_PARAMS::createCoeffRestLog);
 
 					registry.connect("coeffRestLog", coeffRestLog, "model myhooke/stiffness");
-				}
+				}*/
 
 				// error checks on coarsegraining
 				if (force->cg_active())
@@ -247,8 +247,8 @@ namespace LIGGGHTS {
 				const bool update_history = sidata.computeflag && sidata.shearupdate;
 				const int itype = sidata.itype;
 				const int jtype = sidata.jtype;
-				const double radi = sidata.radi;
-				const double rhoi = sidata.densityi;
+				// const double radi = sidata.radi;
+				// const double rhoi = sidata.densityi;
 				int *type = atom->type;
 
 				const int i = sidata.i;
@@ -256,7 +256,6 @@ namespace LIGGGHTS {
 				double zi = x[i][2];
 
 				double meff = sidata.meff;
-				double coeffRestLogChosen;
 
 				if (!displayedSettings)
 				{
@@ -271,20 +270,29 @@ namespace LIGGGHTS {
 				double rmass = atom->rmass[i];
 				double mass = atom->mass[type[i]];
 				double mvv2e = force->mvv2e;
+                
+				std::cout << "debug point 4" << std::endl;
+				
+				if (update_history) {
+					if (MathExtraLiggghts::compDouble(history[0], 0, 1e-6) && zi >= zLow && zi <= zHigh) {
+						history[1] = 1;
+						// history[2] = fabs(sidata.vn);
+					}
+					else history[1] = 0;
 
-
-				if (MathExtraLiggghts::compDouble(history[1], 1, 1e-6))
-					history[2] = fabs(sidata.vn);
+					history[0] += 1;
+				}
 				// calculate stokes number based on the impact velocity  
-				const double stokes = (rhoi + 0.5*liquidDensity)*history[2] * 2 * radi / (9 * coeffMu[itype][jtype]);
+				// const double stokes = (rhoi + 0.5*liquidDensity)*history[2] * 2 * radi / (9 * coeffMu[itype][jtype]);
 
-				if (viscous) {
+				const double coeffRestLogChosen = coeffRestLog[itype][jtype];
+				/*if (viscous) {
 					// Empirical from Legendre (2006)
 					coeffRestLogChosen = log(coeffRestMax[itype][jtype]) - beta / stokes;
 				}
 				else {
 					coeffRestLogChosen = coeffRestLog[itype][jtype];
-				}
+				}*/
 
 				double kn = k_n[itype][jtype];
 				double kt = k_t[itype][jtype];
@@ -300,57 +308,53 @@ namespace LIGGGHTS {
 				const double Fn_contact = kn * sidata.deltan;
 				double Fn = Fn_damping + Fn_contact;
 				bool solidContact = false;
+                
+				std::cout << "debug point 1" << std::endl;
+				
+				// tc is tipical collision time
+				if ((history[0] > tc) || (sidata.vn <= 0 && history[0] > 0.5*tc))
+					solidContact = true;
 
-                // collision frequency and normal stress (pressure)
-				if (update_history) {
+				if (!sidata.is_wall) {
+					double virial[3];
+					const double Fn_contactx = Fn_contact * sidata.en[0];
+					const double Fn_contacty = Fn_contact * sidata.en[1];
+					const double Fn_contactz = Fn_contact * sidata.en[2];
+					virial[0] = 0.5 * sidata.delta[0] * Fn_contactx;
+					virial[1] = 0.5 * sidata.delta[1] * Fn_contacty;
+					virial[2] = 0.5 * sidata.delta[2] * Fn_contactz;
 
-					if (MathExtraLiggghts::compDouble(history[0], 0, 1e-6) && zi >= zLow && zi <= zHigh) {
-						history[1] = 1;
+					double onemass;
+					double ke_i = 0;
+					double ke_j = 0;
+                    
+					std::cout << "debug point 2" << std::endl;
+					if (rmass) {
+						onemass = mvv2e * rmass;
+						ke_i += onemass * sidata.v_i[0] * sidata.v_i[0] + onemass * sidata.v_i[1] * sidata.v_i[1] + onemass * sidata.v_i[2] * sidata.v_i[2];
+						ke_j += onemass * sidata.v_j[0] * sidata.v_j[0] + onemass * sidata.v_j[1] * sidata.v_j[1] + onemass * sidata.v_j[2] * sidata.v_j[2];
 					}
-					else history[1] = 0;
+					else {
+						onemass = mvv2e * mass;
+						ke_i += onemass * sidata.v_i[0] * sidata.v_i[0] + onemass * sidata.v_i[1] * sidata.v_i[1] + onemass * sidata.v_i[2] * sidata.v_i[2];
+						ke_j += onemass * sidata.v_j[0] * sidata.v_j[0] + onemass * sidata.v_j[1] * sidata.v_j[1] + onemass * sidata.v_j[2] * sidata.v_j[2];
+					}
+					
+					sidata.virial_i = virial[0] + virial[1] + virial[2];
+					sidata.virial_j = virial[0] + virial[1] + virial[2];
 
-					history[0] += 1;
-
-					// tc is tipical collision time
-					if ((history[0] > tc) || (sidata.vn <= 0 && history[0] > 0.5*tc))
-						solidContact = true;
-
-					if (!sidata.is_wall) {
-						double virial[3];
-						const double Fn_contactx = Fn_contact * sidata.en[0];
-						const double Fn_contacty = Fn_contact * sidata.en[1];
-						const double Fn_contactz = Fn_contact * sidata.en[2];
-						virial[0] = 0.5 * sidata.delta[0] * Fn_contactx;
-						virial[1] = 0.5 * sidata.delta[1] * Fn_contacty;
-						virial[2] = 0.5 * sidata.delta[2] * Fn_contactz;
-
-						double onemass, ke_i, ke_j;
-
-						if (rmass) {
-							onemass = mvv2e * rmass;
-							ke_i += onemass * sidata.v_i[0] * sidata.v_i[0] + onemass * sidata.v_i[1] * sidata.v_i[1] + onemass * sidata.v_i[2] * sidata.v_i[2];
-							ke_j += onemass * sidata.v_j[0] * sidata.v_j[0] + onemass * sidata.v_j[1] * sidata.v_j[1] + onemass * sidata.v_j[2] * sidata.v_j[2];
-						}
-						else {
-							onemass = mvv2e * mass;
-							ke_i += onemass * sidata.v_i[0] * sidata.v_i[0] + onemass * sidata.v_i[1] * sidata.v_i[1] + onemass * sidata.v_i[2] * sidata.v_i[2];
-							ke_j += onemass * sidata.v_j[0] * sidata.v_j[0] + onemass * sidata.v_j[1] * sidata.v_j[1] + onemass * sidata.v_j[2] * sidata.v_j[2];
-						}
-						
-						sidata.virial_i = virial[0] + virial[1] + virial[2];
-						sidata.virial_j = virial[0] + virial[1] + virial[2];
-
-						if (!solidContact) {
-							sidata.stress_i = (sidata.virial_i + ke_i) / 3;
-							sidata.stress_j = (sidata.virial_j + ke_j) / 3;
-						}
-						else
-						{
-							sidata.stress_i = 0;
-							sidata.stress_j = 0;
-						}
+					if (!solidContact) {
+						sidata.stress_i = (sidata.virial_i + ke_i) / 3;
+						sidata.stress_j = (sidata.virial_j + ke_j) / 3;
+					}
+					else
+					{
+						sidata.stress_i = 0;
+						sidata.stress_j = 0;
 					}
 				}
+                
+				std::cout << "debug point 3" << std::endl;
 
 				//limit force to avoid the artefact of negative repulsion force
 				if (limitForce && (Fn<0.0))
@@ -488,7 +492,7 @@ namespace LIGGGHTS {
 				double * const history = &scdata.contact_history[history_offset];
 				history[0] = 0;
 				history[1] = 0;
-				history[2] = 0;
+				// history[2] = 0;
 
 				if (scdata.contact_flags)
 					*scdata.contact_flags |= CONTACT_NORMAL_MODEL;
@@ -501,13 +505,13 @@ namespace LIGGGHTS {
 		protected:
 			double ** k_n;
 			double ** k_t;
-			double ** coeffRestMax;
+			// double ** coeffRestMax;
 			double ** coeffRestLog;
-			double ** coeffMu;
+			// double ** coeffMu;
 			double beta;
 			double zHigh, zLow, tc;
-			double liquidDensity;
-			bool viscous;
+			// double liquidDensity;
+			// bool viscous;
 			int history_offset;
 			bool tangential_damping;
 			bool limitForce;

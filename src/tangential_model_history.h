@@ -150,6 +150,7 @@ namespace ContactModels
           shear[0] += sidata.vtr1 * dt;
           shear[1] += sidata.vtr2 * dt;
           shear[2] += sidata.vtr3 * dt;
+		  shear[3] = 0;
 
           // rotate shear displacements
 
@@ -192,8 +193,7 @@ namespace ContactModels
             Ft1 *= ratio;
             Ft2 *= ratio;
             Ft3 *= ratio;
-
-			
+		
             if (update_history)
             {
                 shear[0] = -Ft1/kt;
