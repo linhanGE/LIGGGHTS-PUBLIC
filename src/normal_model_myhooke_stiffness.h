@@ -106,8 +106,8 @@ namespace LIGGGHTS {
 				dissipatedflag_(false),
 				dissipation_history_offset_(0)
 			{
-				history_offset = hsetup->add_history_value("contflag", "0");
-				hsetup->add_history_value("contactCounter", "0");
+				history_offset = hsetup->add_history_value("contactCounter", "0");
+				hsetup->add_history_value("firstContactIndicator", "0");
 				hsetup->add_history_value("st", "0");
 			}
 
@@ -336,15 +336,9 @@ namespace LIGGGHTS {
 							ke_i += onemass * sidata.v_i[0] * sidata.v_i[0] + onemass * sidata.v_i[1] * sidata.v_i[1] + onemass * sidata.v_i[2] * sidata.v_i[2];
 							ke_j += onemass * sidata.v_j[0] * sidata.v_j[0] + onemass * sidata.v_j[1] * sidata.v_j[1] + onemass * sidata.v_j[2] * sidata.v_j[2];
 						}
-
-						if (MathExtraLiggghts::compDouble(history[3], 1, 1e-6)) {
-							sidata.virial_i = 0;
-							sidata.virial_j = 0;
-						}
-						else {
-							sidata.virial_i = virial[0] + virial[1] + virial[2];
-							sidata.virial_j = virial[0] + virial[1] + virial[2];
-						}
+						
+						sidata.virial_i = virial[0] + virial[1] + virial[2];
+						sidata.virial_j = virial[0] + virial[1] + virial[2];
 
 						if (!solidContact) {
 							sidata.stress_i = (sidata.virial_i + ke_i) / 3;
