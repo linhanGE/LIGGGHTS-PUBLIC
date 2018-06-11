@@ -80,7 +80,7 @@ namespace LIGGGHTS {
 	namespace ContactModels
 	{
 		template<>
-		class NormalModel<HOOKE_STIFFNESS> : public NormalModelBase
+		class NormalModel<MYHOOKE_STIFFNESS> : public NormalModelBase
 		{
 		public:
 			NormalModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase * c) :
@@ -495,7 +495,6 @@ namespace LIGGGHTS {
 				history[0] = 0;
 				history[1] = 0;
 				history[2] = 0;
-				history[3] = 0;
 
 				if (scdata.contact_flags)
 					*scdata.contact_flags |= CONTACT_NORMAL_MODEL;

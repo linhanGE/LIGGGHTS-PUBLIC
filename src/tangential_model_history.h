@@ -79,6 +79,7 @@ namespace ContactModels
         history_offset = hsetup->add_history_value("shearx", "1");
         hsetup->add_history_value("sheary", "1");
         hsetup->add_history_value("shearz", "1");
+		hsetup->add_history_value("solidcontact", "1");
     }
 
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb)
@@ -127,8 +128,7 @@ namespace ContactModels
         }
     }
 
-    // inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
-	inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
+    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
         // normal forces = Hookian contact + normal velocity damping
         const double enx = sidata.en[0];
@@ -176,8 +176,6 @@ namespace ContactModels
         const double Ft_friction = xmu * fabs(sidata.Fn);
 
         // energy loss from sliding or damping
-		bool solidContact = false;
-
         if (Ft_shear > Ft_friction) {
           if (shrmag != 0.0) {
             const double ratio = Ft_friction / Ft_shear;
@@ -201,6 +199,7 @@ namespace ContactModels
                 shear[0] = -Ft1/kt;
                 shear[1] = -Ft2/kt;
                 shear[2] = -Ft3/kt;
+				shear[3] = 1;
                 if (elasticpotflag_ || dissipatedflag_)
                 {
                     
@@ -215,7 +214,7 @@ namespace ContactModels
         }
         else
         {
-		  solidContact = true;  //  not a "fluid" contact, Ft > muFn
+		  shear[3] = 0;  //  not a "fluid" contact, Ft > muFn
           const double gammat = sidata.gammat;
           Ft1 -= (gammat*sidata.vtr1);
           Ft2 -= (gammat*sidata.vtr2);
@@ -230,11 +229,6 @@ namespace ContactModels
                   cmb->tally_pp(P_diss_local, sidata.i, sidata.j, 1);
           }
         }
-
-		if (solidContact) {
-			sidata.stress_i = 0;
-			sidata.stress_j = 0;
-		}
 
         // forces & torques
         const double tor1 = eny * Ft3 - enz * Ft2;
@@ -376,6 +370,7 @@ namespace ContactModels
         shear[0] = 0.0;
         shear[1] = 0.0;
         shear[2] = 0.0;
+		shear[3] = 0.0;
     }
 
     inline void beginPass(SurfacesIntersectData&, ForceData&, ForceData&){}
