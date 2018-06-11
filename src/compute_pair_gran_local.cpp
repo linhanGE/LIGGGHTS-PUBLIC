@@ -81,7 +81,7 @@ ComputePairGranLocal::ComputePairGranLocal(LAMMPS *lmp, int &iarg, int narg, cha
   posflag = velflag = idflag = fflag = torqueflag = histflag = areaflag = 1;
 
   // do not store fn, ft, heat flux, delta by default
-  fnflag = ftflag  = torquenflag = torquetflag = deltaflag = heatflag = cpflag = msidflag = stress 0;
+  fnflag = ftflag  = torquenflag = torquetflag = deltaflag = heatflag = cpflag = msidflag = stress;
 
   //no extra distance for building the list of pairs
   verbose = false;

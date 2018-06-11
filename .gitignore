@@ -11,3 +11,4 @@ desktop.ini
 *.d
 LIGGGHTS-HPC.vcxproj.user
 sh.exe.stackdump
+.vs/
