@@ -178,11 +178,11 @@ public:
     sidata.v_i = v;
     sidata.v_j = vwall;
     sidata.omega_i = omega;
-	sidata.densityi = rhoi;
-	sidata.zi =  x[2];
+	  sidata.densityi = rhoi;
+	  sidata.zi =  x[2];
 
     sidata.r = sidata.radi - sidata.deltan; // sign corrected, because negative value is passed
-	sidata.nonConr = sidata.radi + sidata.nonConDeltan;
+	  sidata.nonConr = sidata.radi + sidata.nonConDeltan;
     sidata.rsq = sidata.r*sidata.r;
     sidata.nonConrsq = sidata.nonConr*sidata.nonConr;
     const double rinv = 1.0/sidata.r;
