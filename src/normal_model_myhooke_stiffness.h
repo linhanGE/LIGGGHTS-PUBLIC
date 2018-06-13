@@ -238,7 +238,7 @@ namespace ContactModels
 
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
-	  const double gamman = sqrt(4.*meff*kn)*betaeff[itype][jtype];
+	  const double gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype];    // betaeff is negative, gamman should be positive
 	  const double gammat = tangential_damping ? gamman : 0.0;
 
       if(!displayedSettings)
@@ -269,14 +269,14 @@ namespace ContactModels
         bool solidContact = false;
 
         double virialPerAtom[3];
-        const double Fn_contactx = Fn_contact * sidata.en[0];
-        const double Fn_contacty = Fn_contact * sidata.en[1];
-        const double Fn_contactz = Fn_contact * sidata.en[2];
+        const double Fnx = Fn * sidata.en[0];
+        const double Fny = Fn * sidata.en[1];
+        const double Fnz = Fn * sidata.en[2];
         
         // pair-wise virial
-        virialPerAtom[0] = 0.5 * sidata.delta[0] * Fn_contactx;
-        virialPerAtom[1] = 0.5 * sidata.delta[1] * Fn_contacty;
-        virialPerAtom[2] = 0.5 * sidata.delta[2] * Fn_contactz;
+        virialPerAtom[0] = 0.5 * sidata.delta[0] * Fnx;
+        virialPerAtom[1] = 0.5 * sidata.delta[1] * Fny;
+        virialPerAtom[2] = 0.5 * sidata.delta[2] * Fnz;
         
         const double virialij = virialPerAtom[0] + virialPerAtom[1] + virialPerAtom[2];
 

@@ -451,8 +451,9 @@ public:
 				}
 			}
 		  }
-
-		  if (pg->cpl() && addflag)
+          
+		  // if (pg->cpl() && addflag)
+		  if (pg->cpl() && addflag && rsq < radsum * radsum)
 			pg->cpl_add_pair(sidata, i_forces);
 
 		  if (pg->evflag)
