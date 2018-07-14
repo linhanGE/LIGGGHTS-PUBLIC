@@ -56,7 +56,7 @@ void PairHydro::compute(int eflag, int vflag)
 {
 	int i,j,ii,jj,inum,jnum,itype,jtype;
 	double xtmp,ytmp,ztmp,delx,dely,delz;
-	double V_hydro,fx,fy,fz;
+	double V_hydro;
 	double rsq,radi,radj,radsum,radtimes,r,rinv,term1,H,Hinv,fpair;
 	double kij,lowcutij,cutij;
 	int *ilist,*jlist,*numneigh,**firstneigh;
@@ -105,13 +105,15 @@ void PairHydro::compute(int eflag, int vflag)
 			kij = k[itype][jtype];
 			H = MAX(r-radsum,lowcutij);
 			Hinv = 1.0/H; 
-			term1 = radtimes/radsum;                  // harmonic mean of the radius
+			term1 = radtimes/radsum;                    // harmonic mean of the radius
 			if (rsq > radsum*radsum && rsq <= (radsum+cutij)*(radsum+cutij)) {
 				V_hydro = -term1*kij*Hinv/6;            // pay attention to the sign
-				fpair = V_hydro/Hinv;
-				fx = delx*fpair*rinv;
-				fy = dely*fpair*rinv;
-				fz = delz*fpair*rinv;
+				fpair = V_hydro*Hinv;
+
+				double fx = delx*fpair*rinv;
+				double fy = dely*fpair*rinv;
+				double fz = delz*fpair*rinv;
+
 				f[i][0] += fx;
 				f[i][1] += fy;
 				f[i][2] += fz;
@@ -120,8 +122,9 @@ void PairHydro::compute(int eflag, int vflag)
 					f[j][1] -= fy;
 					f[j][2] -= fz;
 				}
+
 				// set j = nlocal so that only I gets tallied
-				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz,1,1);
 			}
 		}
 	}
@@ -193,7 +196,7 @@ void PairHydro::coeff(int narg, char **arg)
 	double k_one = atof(arg[2]);
 	double lowcut_one = atof(arg[3]);
 
-	double cut_one = cut_global;	// cut global set in: PairHydro::settings(int narg, char **arg)
+	double cut_one = cut_global;	            // cut global set in: PairHydro::settings(int narg, char **arg)
 	if (narg == 5) cut_one = atof(arg[4]);
 
 	int count = 0;
@@ -202,7 +205,7 @@ void PairHydro::coeff(int narg, char **arg)
 			k[i][j] = k_one;
 			lowcut[i][j] = lowcut_one;
 			cut[i][j] = cut_one;
-			setflag[i][j] = 1;	// 0/1 = whether each i,j has been set
+			setflag[i][j] = 1;	               // 0/1 = whether each i,j has been set
 
 			count++;
 
@@ -333,8 +336,9 @@ double PairHydro::single(int i, int j, int itype,int jtype,
 	rinv = 1.0/r;
 	Hinv = 1/H;
 	V_hydro = -term1*kij*Hinv/6;                    // pay attention to the sign
-	fpair = V_hydro/Hinv;
+	fpair = V_hydro*Hinv;
 	fforce = factor_lj*fpair*rinv;
+	
 	return factor_lj*fpair;
 } 
 

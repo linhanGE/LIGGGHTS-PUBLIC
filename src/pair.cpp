@@ -932,7 +932,7 @@ void Pair::ev_tally_full(int i, double evdwl, double ecoul, double fpair,
 void Pair::ev_tally_xyz(int i, int j, int nlocal, int newton_pair,
                         double evdwl, double ecoul,
                         double fx, double fy, double fz,
-                        double delx, double dely, double delz)
+                        double delx, double dely, double delz, int fluidContactNormal, int fluidContactTangen)
 {
   double evdwlhalf,ecoulhalf,epairhalf,v[6];
 
@@ -962,12 +962,12 @@ void Pair::ev_tally_xyz(int i, int j, int nlocal, int newton_pair,
   }
 
   if (vflag_either) {
-    v[0] = delx*fx;
-    v[1] = dely*fy;
-    v[2] = delz*fz;
-    v[3] = delx*fy;
-    v[4] = delx*fz;
-    v[5] = dely*fz;
+    v[0] = delx*fx*fluidContactNormal*fluidContactTangen;
+    v[1] = dely*fy*fluidContactNormal*fluidContactTangen;
+    v[2] = delz*fz*fluidContactNormal*fluidContactTangen;
+    v[3] = delx*fy*fluidContactNormal*fluidContactTangen;
+    v[4] = delx*fz*fluidContactNormal*fluidContactTangen;
+    v[5] = dely*fz*fluidContactNormal*fluidContactTangen;
 
     if (vflag_global) {
       if (newton_pair) {

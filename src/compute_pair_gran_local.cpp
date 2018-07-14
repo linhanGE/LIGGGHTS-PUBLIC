@@ -81,14 +81,14 @@ ComputePairGranLocal::ComputePairGranLocal(LAMMPS *lmp, int &iarg, int narg, cha
   posflag = velflag = idflag = fflag = torqueflag = histflag = areaflag = 1;
 
   // do not store fn, ft, heat flux, delta by default
-  fnflag = ftflag  = torquenflag = torquetflag = deltaflag = heatflag = cpflag = msidflag = stressflag;
+  fnflag = ftflag  = torquenflag = torquetflag = deltaflag = heatflag = cpflag = msidflag = 0;
 
   //no extra distance for building the list of pairs
   verbose = false;
 
   // if further args, store only the properties that are listed
   if(narg > iarg)
-     posflag = velflag = idflag = fflag = fnflag = ftflag = torqueflag = torquenflag = torquetflag = histflag = areaflag = deltaflag = heatflag = cpflag = msidflag = stressflag = 0;
+     posflag = velflag = idflag = fflag = fnflag = ftflag = torqueflag = torquenflag = torquetflag = histflag = areaflag = deltaflag = heatflag = cpflag = msidflag = 0;
 
   for (; iarg < narg; iarg++)
   {
@@ -98,7 +98,6 @@ ComputePairGranLocal::ComputePairGranLocal(LAMMPS *lmp, int &iarg, int narg, cha
     else if (strcmp(arg[iarg],"id") == 0) idflag = 1;
     else if (strcmp(arg[iarg],"force") == 0) fflag = 1;
     else if (strcmp(arg[iarg],"force_normal") == 0) fnflag = 1;
-	else if (strcmp(arg[iarg], "stress") == 0) stressflag = 1;
     else if (strcmp(arg[iarg],"force_tangential") == 0) ftflag = 1;
     else if (strcmp(arg[iarg],"torque") == 0) torqueflag = 1;
     else if (strcmp(arg[iarg],"torque_normal") == 0) torquenflag = 1;
@@ -276,7 +275,7 @@ void ComputePairGranLocal::init_cpgl(bool requestflag)
   if(histflag && dnum == 0) error->all(FLERR,"Compute pair/gran/local or wall/gran/local can not calculate history values since pair or wall style does not compute them");
   // standard values: pos1,pos2,id1,id2,extra id for mesh wall,force,torque,contact area
 
-  nvalues = posflag*6 + velflag*6 + idflag*3 + fflag*3 + fnflag*3 + ftflag*3 + torqueflag*3 + torquenflag*3 + torquetflag*3 + histflag*dnum + areaflag + deltaflag + heatflag + cpflag*3 + msidflag*2 + stressflag;
+  nvalues = posflag*6 + velflag*6 + idflag*3 + fflag*3 + fnflag*3 + ftflag*3 + torqueflag*3 + torquenflag*3 + torquetflag*3 + histflag*dnum + areaflag + deltaflag + heatflag + cpflag*3 + msidflag*2;
   size_local_cols = nvalues;
 
 }
@@ -415,7 +414,7 @@ int ComputePairGranLocal::count_wallcontacts(int & nCountWithOverlap)
    add data from particle-particle contact on this proc
 ------------------------------------------------------------------------- */
 
-void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point, double stress)
+void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point)
 {
     
     double del[3],r,rsq,radi,radj,contactArea;
@@ -493,11 +492,6 @@ void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,do
         array[ipair][n++] = fn[1];
         array[ipair][n++] = fn[2];
     }
-	if (stressflag)
-	{
-		array[ipair][n++] = stress;
-	}
-
     if(ftflag)
     {
         double fc[3],fn[3],ft[3],normal[3];
@@ -850,13 +844,10 @@ void ComputePairGranLocal::add_wall_2(int i,double fx,double fy,double fz,double
     }
     if(histflag)
     {
-        for(int d = 0; d < dnum; d++) {
+        for(int d = 0; d < dnum; d++)
            array[ipair][n++] = hist[d];
-           // fprintf(logfile,"hist[%i] = %f \n",d, hist[d]);
-        }
-        // fprintf(logfile,"dnum =  %i\n",dnum);
-     }
-     if(areaflag)
+    }
+    if(areaflag)
     {
         contactArea = (atom->radius[i]*atom->radius[i]-rsq)*M_PI;
         array[ipair][n++] = contactArea;

@@ -120,6 +120,7 @@ namespace ContactModels {
 		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model st/pf/lubrication");
 		registry.connect("coeffMu", coeffMu,"cohesion_model st/pf/lubrication");
 		registry.connect("liquidDensity", liquidDensity,"cohesion_model st/pf/lubrication");
+		
 		// error checks on coarsegraining
 		if(force->cg_active())
 			error->cg(FLERR,"cohesion model st/pf/lubrication");
@@ -131,7 +132,9 @@ namespace ContactModels {
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-	  if (!sidata.is_wall) { //r is the distance between the sphere's centers
+	  if (!sidata.is_wall) 
+	  { 
+		  //r is the distance between the sphere's centers
 		  const double ri = sidata.radi;
 		  const double rj = sidata.radj;
 		  const double zi = sidata.zi;
@@ -144,18 +147,21 @@ namespace ContactModels {
 		  const double rhoj = sidata.densityj;
 	  
 		  double rb = 0, rp = 0, zp = 0 ,zb = 0;
-		  if (rhoi > 0.1 && rhoj> 0.1) {        // make sure SI unit is used
+		  if (rhoi > 0.1 && rhoj> 0.1) {        // should modify, not only use SI units
 			  rp = rhoi > 10 ? ri : rj;
 			  rb = rhoi > 10 ? rj : ri;
 			  zp = rhoi > 10 ? zi : zj;
 			  zb = rhoi > 10 ? zi : zj;
-		  } else {
+		  } 
+		  else 
+		  {
 			  rp = rhoi >= 1 ? ri : rj;
 			  rb = rhoi >= 1 ? rj : ri;	
 			  zp = rhoi >= 1 ? zi : zj;
 			  zb = rhoi >= 1 ? zi : zj;
 		  }
-		  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
+		  const double contactEffAngle = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.jtype];
+		  
 		  //const double sin_alpha = Ri/rp;
 		  /*const double hp = sqrt(rp * rp - Ri * Ri);
 		  const double hb = sqrt(rb * rb - Ri * Ri);
@@ -169,13 +175,14 @@ namespace ContactModels {
 
 		  const double F_ad = -wa/deltan;
 		  if(tangentialReduce_) sidata.Fn += F_ad; */
+
 		  double Fca = 0,Fp = 0;
 		  const double sinalpha = Ri/rb;
 		  const double cosalpha = (dxz*dxz+rp*rp-rb*rb)/(2*dxz*rp);
 	  
 		  if (capillary_) {
 			  const double sintheta_alpha = sin(contactEffAngle)*cosalpha-cos(contactEffAngle)*sinalpha;
-			  Fca=-2*M_PI*surfaceTension*rp*sinalpha*sintheta_alpha;
+			  Fca = -2*M_PI*surfaceTension*rp*sinalpha*sintheta_alpha;
 		  }
 
 		  if (pressure_) {
@@ -185,16 +192,16 @@ namespace ContactModels {
 			  double H = 0;
 			  if (zp - zb > 0) H = rb-ObN;
 			  if (zp - zb > 0) H = rb+ObN;
-			  Fp = M_PI*rp*rp*sinalpha*sinalpha*(2*surfaceTension/rb-liquidDensity*9.81*H);
+			  Fp = M_PI*rp*rp*sinalpha*sinalpha*(liquidDensity*9.81*H-2*surfaceTension/rb);
 		  }
-
+         
 		  const double fx = (Fca + Fp) * sidata.en[0];
 		  const double fy = (Fca + Fp) * sidata.en[1];
 		  const double fz = (Fca + Fp) * sidata.en[2];
 		  if (tangentialReduce_) sidata.Fn += Fca + Fp;
-
+          
 		  if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
-
+          
 		  i_forces.delta_F[0] += fx;
 		  i_forces.delta_F[1] += fy;
 		  i_forces.delta_F[2] += fz;

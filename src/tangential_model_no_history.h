@@ -109,7 +109,7 @@ namespace ContactModels
       registry.connect("coeffFrict", coeffFrict,"tangential_model history");
     }
 
-    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces) {
+    inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces) {
       if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_TANGENTIAL_MODEL;
       const double xmu = coeffFrict[sidata.itype][sidata.jtype];
       const double enx = sidata.en[0];

@@ -84,6 +84,8 @@ struct SurfacesCloseData {
   int j;
   int itype;
   int jtype;
+  int fluidContactNormal;
+  int fluidContactTangen;
 
   bool is_wall;
   bool has_force_update;
@@ -93,9 +95,9 @@ struct SurfacesCloseData {
 
   double * omega_i;
   double * omega_j;
-
-  double stress_i;
-  double stress_j;
+    
+  // double stress_i;
+  // double stress_j;
 
   bool is_non_spherical;
 
@@ -124,14 +126,16 @@ struct SurfacesCloseData {
     j(0),
     itype(0),
     jtype(0),
-	  is_wall(false),
+	fluidContactNormal(0),
+	fluidContactTangen(0),
+	is_wall(false),
     has_force_update(false),
     v_i(NULL),
     v_j(NULL),
-	  omega_i(NULL),
+	omega_i(NULL),
     omega_j(NULL),
-	  stress_i(0.0),
-	  stress_j(0.0),
+	// stress_i(0.0),
+	// stress_j(0.0),
     is_non_spherical(false),
 #ifdef SUPERQUADRIC_ACTIVE_FLAG
     reff(0.0),

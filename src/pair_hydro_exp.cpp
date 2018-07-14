@@ -10,7 +10,7 @@ See the README file in the top-level LAMMPS directory.
 --------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------
-This is a hydrophobic force model to be used in the particle-bubble interaction.
+This is a hydrophobic force model for the particle-bubble interaction.
 Contributing author: Linhan Ge (University of Newcastle)
 ------------------------------------------------------------------------- */
 
@@ -42,7 +42,6 @@ PairHydroExp::~PairHydroExp()
 		memory->destroy(setflag);
 		memory->destroy(cutsq);
 		memory->destroy(lamda);
-		//memory->destroy(vh0);
 		memory->destroy(k);
 		memory->destroy(lowcut);
 		memory->destroy(cut);
@@ -55,7 +54,7 @@ void PairHydroExp::compute(int eflag, int vflag)
 {
 	int i,j,ii,jj,inum,jnum,itype,jtype;
 	double xtmp,ytmp,ztmp,delx,dely,delz,evdwl;
-	double rsq,force_hydro;
+	double rsq,force_hydro,V_hydro;
 	double radi,radj,radsum,radtimes,r,rinv, Hinv;
 	double lamdaij,H,kij,lowcutij,cutij; //vh0_ij
 	double term1;
@@ -79,7 +78,6 @@ void PairHydroExp::compute(int eflag, int vflag)
 	firstneigh = list->firstneigh;
 
 	// loop over neighbors of my atoms
-
 	for (ii =0; ii < inum; ii++) {
 		i = ilist[ii];
 		xtmp = x[i][0];
@@ -104,18 +102,18 @@ void PairHydroExp::compute(int eflag, int vflag)
 			rinv = 1.0/r;
 			lowcutij = lowcut[itype] [jtype];
 			lamdaij = lamda[itype][jtype];
-			//vh0_ij = vh0[itype][jtype];
 			kij = k[itype][jtype];
 			cutij = cut[itype][jtype];
 			H = (r -radsum) > lowcutij ? (r-radsum) : lowcutij;
 			Hinv = 1/H;
-			if ( rsq > radsum*radsum && rsq < (radsum+cutij)*(radsum+cutij)) {                   // active when overlap
-				term1 = radtimes/radsum;                        // harmonic mean of the radius
-				//force_hydro = 2*M_PI*term1*lamdaij*vh0_ij*exp(-H/lamdaij);  
-				force_hydro = -kij*term1*exp(-H/lamdaij);
-				double fx = delx*force_hydro*rinv*Hinv;
-				double fy = dely*force_hydro*rinv*Hinv;
-				double fz = delz*force_hydro*rinv*Hinv;
+			term1 = radtimes/radsum;
+			if ( rsq > radsum*radsum && rsq < (radsum+cutij)*(radsum+cutij)) {         // active when no overlap
+				V_hydro = -kij*term1*exp(-H/lamdaij);                                  // harmonic mean of the radius
+				force_hydro = V_hydro*Hinv;                                            // kij (N)
+				                                        
+				double fx = delx*force_hydro*rinv;
+				double fy = dely*force_hydro*rinv;
+				double fz = delz*force_hydro*rinv;
 
 				f[i][0] += fx;
 				f[i][1] += fy;
@@ -126,18 +124,12 @@ void PairHydroExp::compute(int eflag, int vflag)
 					f[j][2] -= fz;
 				}
 
-				if (eflag) {
-					evdwl = 2*M_PI*term1*lamdaij*kij*exp(-H/lamdaij);
-
-					if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,
-						evdwl,0,f[i][0],f[i][1],f[i][2],delx,dely,delz);
-				}
+				if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,evdwl,0,-fx,-fy,-fz,delx,dely,delz,1,1);
 			}
 		}
-		if (vflag_fdotr) virial_fdotr_compute();
 	}
+	if (vflag_fdotr) virial_fdotr_compute();
 }
-
 /* --------------------------------------------------------------------------------
 
 allocate all arrays
@@ -157,7 +149,6 @@ void PairHydroExp::allocate()
 	memory->create(cutsq,n+1,n+1,"pair:cutsq");
 	memory->create(cut,n+1,n+1,"pair:cut");
 	memory->create(lamda,n+1,n+1,"pair:lamda");
-	//memory->create(vh0,n+1,n+1,"pair:vh0");
 	memory->create(lowcut,n+1,n+1,"pair:lowcut");
 }
 
@@ -199,7 +190,7 @@ void PairHydroExp::coeff(int narg, char **arg)
 	force->bounds(arg[0],atom->ntypes,ilo,ihi);	// see details in force.cpp
 	force->bounds(arg[1],atom->ntypes,jlo,jhi);
 
-	double lamda_one = atof(arg[2]);	// atof converts string to double
+	double lamda_one = atof(arg[2]);	        // atof converts string to double
 	//double vh0_one = atof(arg[3]);
 	double k_one = atof(arg[3]);
 	double lowcut_one = atof(arg[4]);
@@ -210,15 +201,13 @@ void PairHydroExp::coeff(int narg, char **arg)
 	int count = 0;
 	for (int i = ilo; i <= ihi; i++) {
 		for (int j = MAX(jlo,i); j <= jhi; j++) {
-			lamda[i][j] = lamda_one;
-			//vh0[i][j] = vh0_one;
-			k[i][j] = k_one;
-			lowcut[i][j] = lowcut_one;
+			lamda[i][j] = lamda_one;         // lamda is the decay length
+			k[i][j] = k_one;                 
+			lowcut[i][j] = lowcut_one;       // minimum separation distance
 			cut[i][j] = cut_one;
-			setflag[i][j] = 1;	// 0/1 = whether each i,j has been set
+			setflag[i][j] = 1;	             // 0/1 = whether each i,j has been set
 
 			count++;
-
 		}
 	}
 
@@ -238,7 +227,6 @@ double PairHydroExp::init_one(int i, int j)
 	if (setflag[i][j] == 0) error->all(FLERR,"All pair coeffs are not set");
 
 	lamda[j][i] = lamda[i][j];
-	//vh0[j][i] = vh0[i][j];
 	k[j][i] = k[i][j];
 	lowcut[j][i] = lowcut[i][j];
 
@@ -261,7 +249,6 @@ void PairHydroExp::write_restart(FILE *fp)
 			fwrite(&setflag[i][j],sizeof(int),1,fp);
 			if (setflag[i][j]) {
 				fwrite(&lamda[i][j],sizeof(double),1,fp);
-				//fwrite(&vh0[i][j],sizeof(double),1,fp);
 				fwrite(&k[i][j],sizeof(double),1,fp);
 				fwrite(&lowcut[i][j],sizeof(double),1,fp);
 				fwrite(&cut[i][j],sizeof(double),1,fp);
@@ -289,13 +276,11 @@ void PairHydroExp::read_restart(FILE *fp)
 			if (setflag[i][j]) {
 				if (me == 0) {
 					fread(&lamda[i][j],sizeof(double),1,fp);
-					//fread(&vh0[i][j],sizeof(double),1,fp);
 					fread(&k[i][j],sizeof(double),1,fp);
 					fread(&lowcut[i][j],sizeof(double), 1,fp);
 					fread(&cut[i][j],sizeof(double),1,fp);
 				}
 				MPI_Bcast(&lamda[i][j],1,MPI_DOUBLE,0,world);
-				//MPI_Bcast(&vh0[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&k[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&lowcut[i][j],1,MPI_DOUBLE,0,world);
 				MPI_Bcast(&cut[i][j],1,MPI_DOUBLE,0,world);
@@ -335,11 +320,12 @@ double PairHydroExp::single(int i, int j, int itype,int jtype,
 	double factor_coul, double factor_lj,
 	double &fforce)
 {
-	double phi_hydro,r; // separation distance
+	double V_hydro;
+	double r;                                 // separation distance
 	double force_hydro;
 	double radsum,radtimes;
-	double lamdaij,H,k_ij,lowcutij,radi,radj; //vh0_ij
-	double term1;
+	double lamdaij,H,Hinv,k_ij,lowcutij,radi,radj; 
+	double term1, fpair;
 
 	double *radius = atom->radius;
 
@@ -348,18 +334,17 @@ double PairHydroExp::single(int i, int j, int itype,int jtype,
 	radsum = radi + radj;
 	radtimes = radi*radj;
 	lamdaij = lamda[itype][jtype];
-	//vh0_ij = vh0[itype][jtype];
 	k_ij = k[itype][jtype];
 	lowcutij = lowcut[itype][jtype];
 	r = sqrt(rsq);
 	term1 = radtimes/radsum;
 	H = MAX(r-radsum,lowcutij);
+	Hinv = 1/H;
 	double rinv = 1.0/r;
-	//force_hydro =  2*M_PI*term1*lamdaij*vh0_ij*exp(-H/lamdaij);
-	force_hydro =  2*M_PI*term1*lamdaij*k_ij*exp(-H/lamdaij);
-	fforce = factor_lj*force_hydro*rinv;
-	//phi_hydro =  2*M_PI*term1*lamdaij*vh0_ij*exp(-H/lamdaij);
-	phi_hydro =  2*M_PI*term1*lamdaij*k_ij*exp(-H/lamdaij);
-	return factor_lj*phi_hydro;
+	V_hydro =  -term1*k_ij*exp(-H/lamdaij);
+	fpair = V_hydro*Hinv;
+	fforce = factor_lj*fpair*rinv;
+
+	return factor_lj*fpair;
 } 
 

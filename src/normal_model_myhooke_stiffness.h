@@ -219,7 +219,6 @@ namespace ContactModels
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
       double meff=sidata.meff;
-      double mvv2e = force->mvv2e;
 
 	  double zi = sidata.zi;
 
@@ -265,7 +264,11 @@ namespace ContactModels
           Fn = 0.0;
       }
       
-      if (!sidata.is_wall) {
+	  if ( history[0] > tc)
+            sidata.fluidContactNormal = 0;
+	  else sidata.fluidContactNormal = 1;
+
+      /*if (!sidata.is_wall) {
         bool solidContact = false;
 
         double virialPerAtom[3];
@@ -286,7 +289,8 @@ namespace ContactModels
         const double ke_j = massj * (sidata.v_j[0] * sidata.v_j[0] + sidata.v_j[1] * sidata.v_j[1] + sidata.v_j[2] * sidata.v_j[2]);
         
         // tc is tipical collision time
-        if ((history[0] > tc) || (sidata.vn <= 0 && history[0] > 0.5*tc))
+        // if ((history[0] > tc) || (sidata.vn <= 0 && history[0] > 0.5*tc))
+		if ( history[0] > tc)
             solidContact = true;
 
         if (!solidContact) {
@@ -298,7 +302,7 @@ namespace ContactModels
             sidata.stress_i = 0;
             sidata.stress_j = 0;
         }
-      }
+      }*/
       
       sidata.Fn = Fn;
 

@@ -132,7 +132,7 @@ void PairEdl::compute(int eflag, int vflag)
 					f[j][2] -= fz;
 				}
 				// set j = nlocal so that only I gets tallied
-				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz);
+				if (evflag) ev_tally_xyz(i,nlocal,nlocal,0,0.0,0.0,-fx,-fy,-fz,delx,dely,delz,1,1);
 			}
 			
 		}

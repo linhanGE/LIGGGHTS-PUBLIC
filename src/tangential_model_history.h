@@ -79,7 +79,7 @@ namespace ContactModels
         history_offset = hsetup->add_history_value("shearx", "1");
         hsetup->add_history_value("sheary", "1");
         hsetup->add_history_value("shearz", "1");
-		hsetup->add_history_value("solidcontact", "1");
+		// hsetup->add_history_value("fluidContact", "1");
     }
 
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb)
@@ -128,7 +128,7 @@ namespace ContactModels
         }
     }
 
-    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
+    inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
         // normal forces = Hookian contact + normal velocity damping
         const double enx = sidata.en[0];
@@ -150,7 +150,7 @@ namespace ContactModels
           shear[0] += sidata.vtr1 * dt;
           shear[1] += sidata.vtr2 * dt;
           shear[2] += sidata.vtr3 * dt;
-		  shear[3] = 0;
+		  
 
           // rotate shear displacements
 
@@ -178,6 +178,8 @@ namespace ContactModels
 
         // energy loss from sliding or damping
         if (Ft_shear > Ft_friction) {
+		  
+		  sidata.fluidContactTangen = 1;
           if (shrmag != 0.0) {
             const double ratio = Ft_friction / Ft_shear;
             
@@ -193,14 +195,13 @@ namespace ContactModels
             Ft1 *= ratio;
             Ft2 *= ratio;
             Ft3 *= ratio;
-		
+		    
             if (update_history)
             {
                 shear[0] = -Ft1/kt;
                 shear[1] = -Ft2/kt;
                 shear[2] = -Ft3/kt;
-				shear[3] = 1;
-                if (elasticpotflag_ || dissipatedflag_)
+	            if (elasticpotflag_ || dissipatedflag_)
                 {
                     
                     const double weight = 1.0 - vectorMag3D(shear_old)/shrmag;
@@ -214,7 +215,7 @@ namespace ContactModels
         }
         else
         {
-		  shear[3] = 0;  //  not a "fluid" contact, Ft > muFn
+		  sidata.fluidContactTangen = 0;  //  solid contact, Ft <= muFn
           const double gammat = sidata.gammat;
           Ft1 -= (gammat*sidata.vtr1);
           Ft2 -= (gammat*sidata.vtr2);

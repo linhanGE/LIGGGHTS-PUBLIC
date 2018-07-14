@@ -102,7 +102,7 @@ namespace ContactModels
       registry.connect("kT2kcMax", kT2kcMax,"tangential_model tan_luding");
      }
 
-    inline void surfacesIntersect(const SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
+    inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
       const double enx = sidata.en[0];
       const double eny = sidata.en[1];
