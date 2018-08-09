@@ -53,7 +53,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "fix_nve_sphere.h"
+#include "fix_nve_sphere_addedmass.h"
 #include "atom.h"
 #include "atom_vec.h"
 #include "update.h"
@@ -71,52 +71,40 @@ enum{NONE,DIPOLE};
 
 /* ---------------------------------------------------------------------- */
 
-FixNVESphere::FixNVESphere(LAMMPS *lmp, int narg, char **arg) :
+FixNVESphereAddedMass::FixNVESphereAddedMass(LAMMPS *lmp, int narg, char **arg) :
   FixNVE(lmp, narg, arg),
-  useAM_(false),
-  CAddRhoFluid_(0.0),
-  onePlusCAddRhoFluid_(1.0)
+  Cadd_(0.5),
+  rhoFluid_(998.2)
 {
-  if (narg < 3) error->all(FLERR,"Illegal fix nve/sphere command");
+  if (narg < 3) error->all(FLERR,"Illegal fix nve/sphere/addedmass command");
 
   time_integrate = 1;
 
-  // process extra keywords
-
-  extra = NONE;
-
   int iarg = 3;
+
+  if (narg < iarg+3) 
+    error->fix_error(FLERR,this,"not enough arguments for implicit 'added mass'");
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"update") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix nve/sphere command");
-      if (strcmp(arg[iarg+1],"dipole") == 0) extra = DIPOLE;
-      else if (strcmp(arg[iarg+1],"CAddRhoFluid") == 0)
-      {
-            if(narg < iarg+2)
-                error->fix_error(FLERR,this,"not enough arguments for 'CAddRhoFluid'");
-            iarg+=2;
-            useAM_ = true;
-            CAddRhoFluid_        = atof(arg[iarg]);
-            onePlusCAddRhoFluid_ = 1.0 + CAddRhoFluid_;
-            fprintf(screen,"cfd_coupling_force_implicit will consider added mass with CAddRhoFluid = %f\n",
-                    CAddRhoFluid_);
-      }
-      else error->all(FLERR,"Illegal fix nve/sphere command");
-      iarg += 2;
-    } else error->all(FLERR,"Illegal fix nve/sphere command");
+    if (strcmp(arg[iarg],"Cadd") == 0) 
+    {
+      iarg+=1;
+      Cadd_= atof(arg[iarg]);
+    }
+    if (strcmp(arg[iarg],"rhoFluid") == 0) 
+    {
+      iarg+=1;
+      rhoFluid_ = atof(arg[iarg]);
+    }
+    iarg +=1;
   }
-
   // error checks
-
   if (!atom->sphere_flag)
-    error->all(FLERR,"Fix nve/sphere requires atom style sphere");
-  if (extra == DIPOLE && !atom->mu_flag)
-    error->all(FLERR,"Fix nve/sphere requires atom attribute mu");
+    error->all(FLERR,"Fix nve/sphere/addedmass requires atom style sphere");
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVESphere::init()
+void FixNVESphereAddedMass::init()
 {
   FixNVE::init();
 
@@ -130,12 +118,12 @@ void FixNVESphere::init()
   for (int i = 0; i < nlocal; i++)
     if (mask[i] & groupbit)
       if (radius[i] == 0.0)
-        error->one(FLERR,"Fix nve/sphere requires extended particles");
+        error->one(FLERR,"Fix nve/sphere/addedmass requires extended particles");
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVESphere::initial_integrate(int vflag)  // called at very beginning of each timestep
+void FixNVESphereAddedMass::initial_integrate(int vflag)  // called at very beginning of each timestep
 {
   double dtfm,dtirotate,msq,scale;
   double g[3];
@@ -145,6 +133,7 @@ void FixNVESphere::initial_integrate(int vflag)  // called at very beginning of 
   double **f = atom->f;
   double **omega = atom->omega;
   double **torque = atom->torque;
+  double *rho = atom->density;
   double *radius = atom->radius;
   double *rmass = atom->rmass;
   int *mask = atom->mask;
@@ -164,7 +153,7 @@ void FixNVESphere::initial_integrate(int vflag)  // called at very beginning of 
     if (mask[i] & groupbit) {
 
       // velocity update for 1/2 step
-      dtfm = dtf / (rmass[i]*onePlusCAddRhoFluid_);
+      dtfm = dtf / (rmass[i]*(1+Cadd_*rhoFluid_/rho[i]));
       v[i][0] += dtfm * f[i][0];
       v[i][1] += dtfm * f[i][1];
       v[i][2] += dtfm * f[i][2];
@@ -181,31 +170,11 @@ void FixNVESphere::initial_integrate(int vflag)  // called at very beginning of 
       omega[i][2] += dtirotate * torque[i][2];
     }
   }
-
-  // update mu for dipoles
-  // d_mu/dt = omega cross mu
-  // renormalize mu to dipole length
-
-  if (extra == DIPOLE) {
-    double **mu = atom->mu;
-    for (int i = 0; i < nlocal; i++)
-      if (mask[i] & groupbit)
-        if (mu[i][3] > 0.0) {
-          g[0] = mu[i][0] + dtv * (omega[i][1]*mu[i][2]-omega[i][2]*mu[i][1]);
-          g[1] = mu[i][1] + dtv * (omega[i][2]*mu[i][0]-omega[i][0]*mu[i][2]);
-          g[2] = mu[i][2] + dtv * (omega[i][0]*mu[i][1]-omega[i][1]*mu[i][0]);
-          msq = g[0]*g[0] + g[1]*g[1] + g[2]*g[2];
-          scale = mu[i][3]/sqrt(msq);
-          mu[i][0] = g[0]*scale;
-          mu[i][1] = g[1]*scale;
-          mu[i][2] = g[2]*scale;
-        }
-  }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVESphere::final_integrate()  // called at end of each timestep
+void FixNVESphereAddedMass::final_integrate()  // called at end of each timestep
 {
   double dtfm,dtirotate;
 
@@ -213,6 +182,7 @@ void FixNVESphere::final_integrate()  // called at end of each timestep
   double **f = atom->f;
   double **omega = atom->omega;
   double **torque = atom->torque;
+  double *rho = atom->density;
   double *rmass = atom->rmass;
   double *radius = atom->radius;
   int *mask = atom->mask;
@@ -232,7 +202,7 @@ void FixNVESphere::final_integrate()  // called at end of each timestep
     if (mask[i] & groupbit) {
 
       // velocity update for 1/2 step
-      dtfm = dtf / (rmass[i]*onePlusCAddRhoFluid_);
+      dtfm = dtf / (rmass[i]*(1+Cadd_*rhoFluid_/rho[i]));
       v[i][0] += dtfm * f[i][0];
       v[i][1] += dtfm * f[i][1];
       v[i][2] += dtfm * f[i][2];
