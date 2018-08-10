@@ -63,12 +63,12 @@ namespace MODEL_PARAMS
 	  return fluidViscosityScalar;
 	}
 	
-	inline static ScalarProperty* createMinSeparationDist(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	inline static MatrixProperty* createMinSeparationDist(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
-	  ScalarProperty* minSeparationDistScalar = MODEL_PARAMS::createScalarProperty(registry, "minSeparationDist", caller);
-	  return minSeparationDistScalar;
+	  MatrixProperty* minSeparationDistMatrix = MODEL_PARAMS::createPerTypePairProperty(registry, "minSeparationDist", caller);
+	  return minSeparationDistMatrix;
 	}
-
+    
 	inline static ScalarProperty* createMaxSeparationDistRatio(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  ScalarProperty* maxSeparationDistRatioScalar = MODEL_PARAMS::createScalarProperty(registry, "maxSeparationDistRatio", caller);
@@ -87,7 +87,7 @@ namespace ContactModels {
 	static const int MASK = CM_CONNECT_TO_PROPERTIES | CM_SURFACES_INTERSECT;
 	
 	CohesionModel(LAMMPS * lmp, IContactHistorySetup * hsetup,class ContactModelBase *cmb) :
-	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), minSeparationDist(0.),maxSeparationDistRatio(0.)
+	  CohesionModelBase(lmp, hsetup, cmb), fluidViscosity(0.0), maxSeparationDistRatio(0.), minSeparationDist(NULL)
 	{
 		
 	}
@@ -133,6 +133,9 @@ namespace ContactModels {
 
 	   scdata.has_force_update = true;
 
+	   const int itype = scdata.itype;
+       const int jtype = scdata.jtype;
+
 	   if (!scdata.is_wall) {
 
 		  const double rsq = scdata.rsq;
@@ -143,7 +146,8 @@ namespace ContactModels {
 		  const double radj = scdata.radj;
 		  const double rEff = radi*radj / radsum;
 		  double d = r - radsum;
-		  d = d > minSeparationDist ? d : minSeparationDist;
+		  
+		  d = d > minSeparationDist[itype][jtype] ? d : minSeparationDist[itype][jtype];
 			  
 		  const double dx = scdata.delta[0];
 		  const double dy = scdata.delta[1];
@@ -175,7 +179,7 @@ namespace ContactModels {
 	  if(scdata.is_wall) {
 		
 		double d = scdata.nonConDeltan;                             // deltan is the distance to the wall if scdata.wall = true
-		d = d > minSeparationDist ? d : minSeparationDist;
+		d = d > minSeparationDist[itype][jtype] ? d : minSeparationDist[itype][jtype];
 		const double rinv =  1.0/scdata.nonConr;
 		const double enx = scdata.delta[0] * rinv;
 		const double eny = scdata.delta[1] * rinv;
@@ -201,7 +205,8 @@ namespace ContactModels {
 	}
   
   private:
-	double fluidViscosity,minSeparationDist, maxSeparationDistRatio;
+	double fluidViscosity, maxSeparationDistRatio;
+	double ** minSeparationDist;
 	bool tangentialReduce_;
   };
  }

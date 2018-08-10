@@ -95,7 +95,8 @@ namespace ContactModels
       dissipation_history_offset_(0)
     {
       history_offset = hsetup->add_history_value("contactCounter", "0");
-	  hsetup->add_history_value("indicator", "0");
+	  hsetup->add_history_value("collisionIndicator", "0");
+      hsetup->add_history_value("impactV", "0");
     }
 
     void registerSettings(Settings & settings)
@@ -227,12 +228,13 @@ namespace ContactModels
       double * const history = &sidata.contact_history[history_offset];
                
       if (update_history) {
-          if (MathExtraLiggghts::compDouble(history[0], 0, 1e-6) && zi >= zLow && zi <= zHigh) {
+          if (zi >= zLow && zi <= zHigh) history[0] = +1;
+          
+          if (MathExtraLiggghts::compDouble(history[0], 1, 1e-6)) 
+          {
               history[1] = 1;
+              history[2] = sidata.vn;
           }
-          else history[1] = 0;
-
-          history[0] += 1;
       }
 
       double kn = k_n[itype][jtype];
@@ -243,11 +245,6 @@ namespace ContactModels
       if(!displayedSettings)
       {
         displayedSettings = true;
-
-        /*
-        if(limitForce)
-            if(0 == comm->me) fprintf(screen," NormalModel<MYHOOKE_STIFFNESS>: will limit normal force.\n");
-        */
       }
 
       // convert Kn and Kt from pressure units to force/distance^2
@@ -268,42 +265,6 @@ namespace ContactModels
             sidata.fluidContactNormal = 0;
 	  else sidata.fluidContactNormal = 1;
 
-      /*if (!sidata.is_wall) {
-        bool solidContact = false;
-
-        double virialPerAtom[3];
-        const double Fnx = Fn * sidata.en[0];
-        const double Fny = Fn * sidata.en[1];
-        const double Fnz = Fn * sidata.en[2];
-        
-        // pair-wise virial
-        virialPerAtom[0] = 0.5 * sidata.delta[0] * Fnx;
-        virialPerAtom[1] = 0.5 * sidata.delta[1] * Fny;
-        virialPerAtom[2] = 0.5 * sidata.delta[2] * Fnz;
-        
-        const double virialij = virialPerAtom[0] + virialPerAtom[1] + virialPerAtom[2];
-
-        const double massi = mvv2e * sidata.mi;
-        const double massj = mvv2e * sidata.mj;
-        const double ke_i = massi * (sidata.v_i[0] * sidata.v_i[0] + sidata.v_i[1] * sidata.v_i[1] + sidata.v_i[2] * sidata.v_i[2]);
-        const double ke_j = massj * (sidata.v_j[0] * sidata.v_j[0] + sidata.v_j[1] * sidata.v_j[1] + sidata.v_j[2] * sidata.v_j[2]);
-        
-        // tc is tipical collision time
-        // if ((history[0] > tc) || (sidata.vn <= 0 && history[0] > 0.5*tc))
-		if ( history[0] > tc)
-            solidContact = true;
-
-        if (!solidContact) {
-            sidata.stress_i = (virialij + ke_i) / 3;
-            sidata.stress_j = (virialij + ke_j) / 3;
-        }
-        else
-        {
-            sidata.stress_i = 0;
-            sidata.stress_j = 0;
-        }
-      }*/
-      
       sidata.Fn = Fn;
 
       sidata.kn = kn;
@@ -436,6 +397,7 @@ namespace ContactModels
         double * const history = &scdata.contact_history[history_offset];
         history[0] = 0;
         history[1] = 0;
+        history[2] = 0;
         
         dissipateElasticPotential(scdata);
     }
