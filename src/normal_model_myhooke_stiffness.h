@@ -228,7 +228,7 @@ namespace ContactModels
       double * const history = &sidata.contact_history[history_offset];
                
       if (update_history) {
-          if (zi >= zLow && zi <= zHigh) history[0] = +1;
+          if (zi >= zLow && zi <= zHigh) history[0] += 1;
           
           if (MathExtraLiggghts::compDouble(history[0], 1, 1e-6)) 
           {
