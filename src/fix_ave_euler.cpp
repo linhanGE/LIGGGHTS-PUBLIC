@@ -89,7 +89,8 @@ FixAveEuler::FixAveEuler(LAMMPS *lmp, int narg, char **arg) :
   mass_(NULL),
   stress_(NULL),
   compute_stress_(NULL),
-  random_(0)
+  random_(0),
+  ke_(false)
 {
   // this fix produces a global array
 
@@ -103,7 +104,7 @@ FixAveEuler::FixAveEuler(LAMMPS *lmp, int narg, char **arg) :
   random_ = new RanPark(lmp,"15485863");
 
   // parse args
-  if (narg < 6) error->all(FLERR,"Illegal fix ave/pic command");
+  if (narg < 8) error->all(FLERR,"Illegal fix ave/pic command");
   int iarg = 3;
 
   if(strcmp(arg[iarg++],"nevery"))
@@ -112,7 +113,12 @@ FixAveEuler::FixAveEuler(LAMMPS *lmp, int narg, char **arg) :
   if(exec_every_ < 1)
     error->fix_error(FLERR,this,"'nevery' > 0 required");
   nevery = exec_every_;
-
+  
+  if(strcmp(arg[iarg++],"ke"))
+    error->fix_error(FLERR,this,"expecting keyword 'ke'");
+  if(strcmp(arg[iarg],"yes") == 0)
+    ke_ = true;
+  
   if(strcmp(arg[iarg++],"cell_size_relative"))
     error->fix_error(FLERR,this,"expecting keyword 'cell_size_relative'");
   cell_size_ideal_rel_ = force->numeric(FLERR,arg[iarg++]);
@@ -626,12 +632,24 @@ void FixAveEuler::calculate_eu()
 
         for(int iatom = cellhead_[icell/*+stencil*/]; iatom >= 0; iatom = cellptr_[iatom])
         {
-            stress_[icell][1] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][0]-v_av_[icell][0]) + stress_atom[iatom][0];
-            stress_[icell][2] += -rmass[iatom]*(v[iatom][1]-v_av_[icell][1])*(v[iatom][1]-v_av_[icell][1]) + stress_atom[iatom][1];
-            stress_[icell][3] += -rmass[iatom]*(v[iatom][2]-v_av_[icell][2])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][2];
-            stress_[icell][4] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][1]-v_av_[icell][1]) + stress_atom[iatom][3];
-            stress_[icell][5] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][4];
-            stress_[icell][6] += -rmass[iatom]*(v[iatom][1]-v_av_[icell][1])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][5]; 
+            if (ke_) 
+            {
+                stress_[icell][1] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][0]-v_av_[icell][0]) + stress_atom[iatom][0];
+                stress_[icell][2] += -rmass[iatom]*(v[iatom][1]-v_av_[icell][1])*(v[iatom][1]-v_av_[icell][1]) + stress_atom[iatom][1];
+                stress_[icell][3] += -rmass[iatom]*(v[iatom][2]-v_av_[icell][2])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][2];
+                stress_[icell][4] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][1]-v_av_[icell][1]) + stress_atom[iatom][3];
+                stress_[icell][5] += -rmass[iatom]*(v[iatom][0]-v_av_[icell][0])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][4];
+                stress_[icell][6] += -rmass[iatom]*(v[iatom][1]-v_av_[icell][1])*(v[iatom][2]-v_av_[icell][2]) + stress_atom[iatom][5];
+            } 
+            else 
+            {
+                stress_[icell][1] += stress_atom[iatom][0];
+                stress_[icell][2] += stress_atom[iatom][1];
+                stress_[icell][3] += stress_atom[iatom][2];
+                stress_[icell][4] += stress_atom[iatom][3];
+                stress_[icell][5] += stress_atom[iatom][4];
+                stress_[icell][6] += stress_atom[iatom][5];
+            }
         }
         stress_[icell][0] = -0.333333333333333*(stress_[icell][1]+stress_[icell][2]+stress_[icell][3]);
         if(weight_[icell] < eps_ntry)

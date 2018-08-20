@@ -261,7 +261,7 @@ namespace ContactModels
           Fn = 0.0;
       }
       
-	  if ( history[0] > tc)
+	  if ( history[0] >= tc)
             sidata.fluidContactNormal = 0;
 	  else sidata.fluidContactNormal = 1;
 

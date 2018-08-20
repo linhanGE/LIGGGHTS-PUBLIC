@@ -179,6 +179,8 @@ class FixAveEuler : public Fix {
   class ComputeStressAtom *compute_stress_;
 
   class RanPark *random_;
+
+  bool ke_;
 };
 
 }
