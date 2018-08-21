@@ -118,6 +118,11 @@ FixAveEuler::FixAveEuler(LAMMPS *lmp, int narg, char **arg) :
     error->fix_error(FLERR,this,"expecting keyword 'ke'");
   if(strcmp(arg[iarg],"yes") == 0)
     ke_ = true;
+  else if(strcmp(arg[iarg],"no") == 0)
+    ke_ = false;
+  else
+    error->fix_error(FLERR,this,"expecting 'yes' or 'no' after 'ke'");
+  iarg++;
   
   if(strcmp(arg[iarg++],"cell_size_relative"))
     error->fix_error(FLERR,this,"expecting keyword 'cell_size_relative'");
