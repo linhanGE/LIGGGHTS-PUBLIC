@@ -90,13 +90,18 @@ FixNVESphereAddedMass::FixNVESphereAddedMass(LAMMPS *lmp, int narg, char **arg) 
       iarg+=1;
       Cadd_= atof(arg[iarg]);
     }
+    iarg +=1;
+
     if (strcmp(arg[iarg],"rhoFluid") == 0) 
     {
       iarg+=1;
       rhoFluid_ = atof(arg[iarg]);
     }
-    iarg +=1;
   }
+  
+  fprintf(screen,"cfd_coupling_force_implicit will consider added mass with Cadd = %f\n, rhoFluid = %f\n",
+                    Cadd_, rhoFluid_);
+
   // error checks
   if (!atom->sphere_flag)
     error->all(FLERR,"Fix nve/sphere/addedmass requires atom style sphere");
