@@ -94,9 +94,10 @@ namespace ContactModels
       dissipatedflag_(false),
       dissipation_history_offset_(0)
     {
-      history_offset = hsetup->add_history_value("contactCounter", "0");
-	  hsetup->add_history_value("collisionIndicator", "0");
+      history_offset = hsetup->add_history_value("collisionTime", "0");
+	  hsetup->add_history_value("firstCollisionIndicator", "0");
       hsetup->add_history_value("impactV", "0");
+      hsetup->add_history_value("bubbleCollisionIndicator", "0");
     }
 
     void registerSettings(Settings & settings)
@@ -219,6 +220,9 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
+      const int i = sidata.i;
+      const int j = sidata.j;
+
       double meff=sidata.meff;
 
 	  double zi = sidata.zi;
@@ -227,15 +231,20 @@ namespace ContactModels
 	  // and will be called for another time if there is comptute_pair_gran_local.
       double * const history = &sidata.contact_history[history_offset];
                
-      if (update_history) {
-          if (zi >= zLow && zi <= zHigh) history[0] += 1;
-          
-          if (MathExtraLiggghts::compDouble(history[0], 1, 1e-6)) 
+      if (MathExtraLiggghts::compDouble(history[0], 0, 1e-6) && zi >= zLow && zi <= zHigh) 
+      {
+          history[1] = 1;
+          history[2] = sidata.vn;
+          if ( atom->tag[i] == 1 || atom->tag[j] == 1 )
           {
-              history[1] = 1;
-              history[2] = sidata.vn;
+          history[3] = 1;
           }
       }
+      else 
+          history[1] = 0;
+
+      if (update_history) 
+          history[0] += 1;
 
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
@@ -398,6 +407,7 @@ namespace ContactModels
         history[0] = 0;
         history[1] = 0;
         history[2] = 0;
+        history[3] = 0;
         
         dissipateElasticPotential(scdata);
     }
