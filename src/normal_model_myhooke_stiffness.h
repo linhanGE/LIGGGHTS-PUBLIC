@@ -275,7 +275,6 @@ namespace ContactModels
 	  else sidata.fluidContactNormal = 1;
 
       sidata.Fn = Fn;
-
       sidata.kn = kn;
       sidata.kt = kt;
       sidata.gamman = gamman;

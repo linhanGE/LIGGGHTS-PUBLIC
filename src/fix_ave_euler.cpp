@@ -334,7 +334,7 @@ void FixAveEuler::setup_bins()
         memory->grow(vol_fr_,ncells_max_,  "ave/euler:vol_fr_");
         memory->grow(weight_,ncells_max_,  "ave/euler:weight_");
         memory->grow(radius_,ncells_max_,  "ave/euler:radius_");
-        memory->grow(ncount_,ncells_max_,    "ave/euler:ncount_");
+        memory->grow(ncount_,ncells_max_,  "ave/euler:ncount_");
         memory->grow(mass_,ncells_max_,    "ave/euler:mass_");
         memory->grow(stress_,ncells_max_,7,"ave/euler:stress_");
     }
