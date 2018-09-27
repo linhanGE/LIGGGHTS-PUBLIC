@@ -60,10 +60,8 @@ namespace ContactModels
       NormalModelBase(lmp, hsetup, c),
       k_n(NULL),
       k_t(NULL),
-      gamma_n(NULL),
-      gamma_t(NULL),
+      betaeff(NULL),
       tangential_damping(false),
-      absolute_damping(false),
       limitForce(false),
       displayedSettings(false),
       elastic_potential_offset_(0),
@@ -72,13 +70,11 @@ namespace ContactModels
       dissipatedflag_(false),
       dissipation_history_offset_(0)
     {
-      
     }
 
     void registerSettings(Settings & settings)
     {
       settings.registerOnOff("tangential_damping", tangential_damping, true);
-      settings.registerOnOff("absolute_damping", absolute_damping);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
       settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -125,26 +121,16 @@ namespace ContactModels
     void connectToProperties(PropertyRegistry & registry) {
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
+      registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff);
 
       registry.connect("k_n", k_n,"model hooke/stiffness");
       registry.connect("k_t", k_t,"model hooke/stiffness");
-
-      if(absolute_damping) {
-        registry.registerProperty("gamman_abs", &MODEL_PARAMS::createGammanAbs);
-        registry.registerProperty("gammat_abs", &MODEL_PARAMS::createGammatAbs);
-        registry.connect("gamman_abs", gamma_n,"model hooke/stiffness");
-        registry.connect("gammat_abs", gamma_t,"model hooke/stiffness");
-      } else {
-        registry.registerProperty("gamman", &MODEL_PARAMS::createGamman);
-        registry.registerProperty("gammat", &MODEL_PARAMS::createGammat);
-        registry.connect("gamman", gamma_n,"model hooke/stiffness");
-        registry.connect("gammat", gamma_t,"model hooke/stiffness");
-      }
+      registry.connect("betaeff", betaeff,"model hooke/stiffness");
 
       // error checks on coarsegraining
       if(force->cg_active())
         error->cg(FLERR,"model hooke/stiffness");
-
+      
       // enlarge contact distance flag in case of elastic energy computation
       // to ensure that surfaceClose is called after a contact
       if (elasticpotflag_)
@@ -198,33 +184,20 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
+      const int i = sidata.i;
+      const int j = sidata.j;
+
       double meff=sidata.meff;
 
       double kn = k_n[itype][jtype];
-      double kt = k_t[itype][jtype];
-      double gamman, gammat;
+	  double kt = k_t[itype][jtype];
+	  const double gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype];    // betaeff is negative, gamman should be positive
+	  const double gammat = tangential_damping ? gamman : 0.0;
 
       if(!displayedSettings)
       {
         displayedSettings = true;
-
-        /*
-        if(limitForce)
-            if(0 == comm->me) fprintf(screen," NormalModel<HOOKE_STIFFNESS>: will limit normal force.\n");
-        */
       }
-      if(absolute_damping)
-      {
-        gamman = gamma_n[itype][jtype];
-        gammat = gamma_t[itype][jtype];
-      }
-      else
-      {
-        gamman = meff*gamma_n[itype][jtype];
-        gammat = meff*gamma_t[itype][jtype];
-      }
-
-      if (!tangential_damping) gammat = 0.0;
 
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
@@ -239,9 +212,8 @@ namespace ContactModels
       {
           Fn = 0.0;
       }
-
+      
       sidata.Fn = Fn;
-
       sidata.kn = kn;
       sidata.kt = kt;
       sidata.gamman = gamman;
@@ -365,7 +337,7 @@ namespace ContactModels
     }
 
     void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
-    {
+    {   
         if (scdata.contact_flags)
             *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
         dissipateElasticPotential(scdata);
@@ -377,11 +349,8 @@ namespace ContactModels
   protected:
     double ** k_n;
     double ** k_t;
-    double ** gamma_n;
-    double ** gamma_t;
-
+    double ** betaeff;
     bool tangential_damping;
-    bool absolute_damping;
     bool limitForce;
     bool displayedSettings;
     int elastic_potential_offset_;
@@ -392,5 +361,5 @@ namespace ContactModels
   };
 }
 }
-#endif // NORMAL_MODEL_HOOKE_STIFFNESS_H_
+#endif // NORMAL_MODEL_MYHOOKE_STIFFNESS_H_
 #endif
