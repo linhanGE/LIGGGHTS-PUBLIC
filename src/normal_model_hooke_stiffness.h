@@ -184,8 +184,8 @@ namespace ContactModels
       const bool update_history = sidata.computeflag && sidata.shearupdate;
       const int itype = sidata.itype;
       const int jtype = sidata.jtype;
-      const int i = sidata.i;
-      const int j = sidata.j;
+      // const int i = sidata.i;
+      // const int j = sidata.j;
 
       double meff=sidata.meff;
 

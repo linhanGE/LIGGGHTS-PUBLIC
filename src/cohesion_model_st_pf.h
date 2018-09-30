@@ -125,22 +125,21 @@ namespace ContactModels {
         const int jtype = sidata.jtype;
 		const double zi = sidata.zi;
 		const double zj = sidata.zj;
-		// const double delx = sidata.delta[0];
-		// const double delz = sidata.delta[2];
-		// const double dxz = sqrt(delx*delx+delz*delz);
+
 		const double rhoi = sidata.densityi;
 		const double rhoj = sidata.densityj;
         const double deltan = sidata.deltan;
         
-		double rb = 0, rp = 0, d = 0, Ri = 0;
+		double rb = 0, rp = 0, d = 0, Ri = 0, deltaz = 0, zp = 0, zb = 0;
         if ( rhoi/rhoj > 500 || rhoi/rhoj < 500 )
 		{  
             rp = rhoi/rhoj > 500 ? ri : rj;
 		    rb = rhoi/rhoj > 500 ? rj : ri;
-		    // zp = rhoi/rhoj > 500 ? zi : zj;
-		    // zb = rhoi/rhoj > 500 ? zi : zj;
+		    zp = rhoi/rhoj > 500 ? zi : zj;
+		    zb = rhoi/rhoj > 500 ? zi : zj;
             d = rb+rp-deltan;
             Ri = sqrt((-d+rp-rb)*(-d-rp+rb)*(-d+rp+rb)*(d+rp+rb))/(2*d);
+			deltaz = abs(zi-zj);
         }
         else 
         {
@@ -151,20 +150,6 @@ namespace ContactModels {
         const double theta = contactAngle[itype][jtype];
         const double sigma = surfaceTension[itype][jtype];
 		  
-		  //const double sin_alpha = Ri/rp;
-		  /*const double hp = sqrt(rp * rp - Ri * Ri);
-		  const double hb = sqrt(rb * rb - Ri * Ri);
-	  
-		  const double sp = 2*M_PI*rp*hp;
-		  const double sb = 2*M_PI*rb*hb;
-
-		  const double theta = rp == rhoi ? contactAngle[sidata.itype] : contactAngle[sidata.itype];
-
-		  const double wa = sigma*(sb-sp*cos(theta));
-
-		  const double F_ad = -wa/deltan;
-		  if(tangentialReduce_) sidata.Fn += F_ad; */
-
 		double Fca = 0,Fp = 0;
 		const double sinalpha = Ri/rp;
 		const double cosalpha = (d*d+rp*rp-rb*rb)/(2*d*rp);
@@ -178,13 +163,12 @@ namespace ContactModels {
 
 		if (pressure_) 
 		{
-		    /*const double POb = sinalpha*rb;
-			const double ObM = abs(delz);
-			const double ObN = POb/dxz*ObM;
-			double H = 0;
-			if (zp - zb > 0) H = rb-ObN;
-			if (zp - zb > 0) H = rb+ObN;*/
-			Fp = M_PI*rp*rp*sinalpha*sinalpha*(liquidDensity*9.81*2*rb-2*sigma/rb);
+		    const double n = rb - (rp-rb+d)*(rp+rb-d)/(2*d);
+			const double m = deltaz/d*n;
+            double H = 0;         
+			if (zp > zb) H = rb - m;
+			else  H = rb+m;
+			Fp = M_PI*rp*rp*sinalpha*sinalpha*(liquidDensity*9.81*H-2*sigma/rb);
             // std::cout << "pressure force " << Fp <<"rb " << rb << std::endl; 
 		}
          
