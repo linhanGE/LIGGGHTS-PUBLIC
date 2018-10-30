@@ -67,6 +67,12 @@ namespace MODEL_PARAMS {
 		ScalarProperty* tc_Scalar = MODEL_PARAMS::createScalarProperty(registry, "tc", caller);
 		return tc_Scalar;
 	}
+
+    inline static ScalarProperty* createBubbleIDMHS(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+		ScalarProperty* bubbleID_Scalar = MODEL_PARAMS::createScalarProperty(registry, "bubbleID", caller);
+		return bubbleID_Scalar;
+	}
 }
 
 namespace LIGGGHTS {
@@ -153,6 +159,7 @@ namespace ContactModels
       registry.registerProperty("zHigh", &MODEL_PARAMS::createZHighMHS);
 	  registry.registerProperty("zLow", &MODEL_PARAMS::createZLowMHS);
 	  registry.registerProperty("tc", &MODEL_PARAMS::createTcMHS);
+      registry.registerProperty("bubbleID", &MODEL_PARAMS::createBubbleIDMHS);
 
       registry.connect("k_n", k_n,"model myhooke/stiffness");
       registry.connect("k_t", k_t,"model myhooke/stiffness");
@@ -160,6 +167,7 @@ namespace ContactModels
       registry.connect("zHigh", zHigh, "model myhooke/stiffness");
 	  registry.connect("zLow", zLow, "model myhooke/stiffness");
 	  registry.connect("tc", tc, "model myhooke/stiffness");
+      registry.connect("bubbleID", bubbleID, "model myhooke/stiffness");
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -235,10 +243,10 @@ namespace ContactModels
       {
           history[1] = 1;
           history[2] = sidata.vn;
-          if ( atom->tag[i] == 1 || atom->tag[j] == 1 )
-          {
-          history[3] = 1;
-          }
+          if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID) )
+              history[3] = 1;
+          else 
+              history[3] = 0;
       }
       else 
           history[1] = 0;
@@ -418,7 +426,7 @@ namespace ContactModels
     double ** k_n;
     double ** k_t;
     double ** betaeff;
-    double zHigh, zLow, tc;
+    double zHigh, zLow, tc, bubbleID;
     int history_offset;
     bool tangential_damping;
     bool limitForce;
