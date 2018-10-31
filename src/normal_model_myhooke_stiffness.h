@@ -248,8 +248,12 @@ namespace ContactModels
           else 
               history[3] = 0;
       }
-      else 
+      else
+      {
           history[1] = 0;
+          history[3] = 0;
+      } 
+          
 
       if (update_history) 
           history[0] += 1;
