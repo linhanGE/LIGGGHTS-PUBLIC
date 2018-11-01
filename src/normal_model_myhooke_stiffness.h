@@ -92,6 +92,7 @@ namespace ContactModels
 	  tc(0.),
       history_offset(0),
       tangential_damping(false),
+      fully_damping(false),
       limitForce(false),
       displayedSettings(false),
       elastic_potential_offset_(0),
@@ -109,6 +110,7 @@ namespace ContactModels
     void registerSettings(Settings & settings)
     {
       settings.registerOnOff("tangential_damping", tangential_damping, true);
+      settings.registerOnOff("fully_damping", fully_damping, false);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
       settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
@@ -243,7 +245,7 @@ namespace ContactModels
       {
           history[1] = 1;
           history[2] = sidata.vn;
-          if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID) )
+          if ( atom->tag[i] == int (bubbleID) )
               history[3] = 1;
           else 
               history[3] = 0;
@@ -260,8 +262,13 @@ namespace ContactModels
 
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
-	  const double gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype];    // betaeff is negative, gamman should be positive
-	  const double gammat = tangential_damping ? gamman : 0.0;
+	  double gamman = 0;
+      if (fully_damping)
+          gamman = 2*sqrt(meff*kn);
+      else 
+          gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype]; // betaeff is negative, gamman should be positive
+	  
+      const double gammat = tangential_damping ? gamman : 0.0;
 
       if(!displayedSettings)
       {
@@ -432,7 +439,7 @@ namespace ContactModels
     double ** betaeff;
     double zHigh, zLow, tc, bubbleID;
     int history_offset;
-    bool tangential_damping;
+    bool tangential_damping, fully_damping;
     bool limitForce;
     bool displayedSettings;
     int elastic_potential_offset_;
