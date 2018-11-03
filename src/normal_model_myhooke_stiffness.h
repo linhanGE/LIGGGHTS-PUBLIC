@@ -175,7 +175,7 @@ namespace ContactModels
       if(force->cg_active())
         error->cg(FLERR,"model myhooke/stiffness");
       
-      neighbor->register_contact_dist_factor(1.1);
+      neighbor->register_contact_dist_factor(1.01);
 
       // enlarge contact distance flag in case of elastic energy computation
       // to ensure that surfaceClose is called after a contact
@@ -225,40 +225,44 @@ namespace ContactModels
 
     inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
+      
       if (sidata.contact_flags)
           *sidata.contact_flags |= CONTACT_NORMAL_MODEL;
       const bool update_history = sidata.computeflag && sidata.shearupdate;
-      const int itype = sidata.itype;
+	  
+	  const int itype = sidata.itype;
       const int jtype = sidata.jtype;
       const int i = sidata.i;
       const int j = sidata.j;
 
-      double meff=sidata.meff;
+      double meff=sidata.meff;  // already consider the freeze particle in pair_gran_base.h Line 394
 
 	  double zi = sidata.zi;
 
       // The normal model will be called during collision, 
 	  // and will be called for another time if there is comptute_pair_gran_local.
-      double * const history = &sidata.contact_history[history_offset];
-               
-      if (MathExtraLiggghts::compDouble(history[0], 0, 1e-6) && zi >= zLow && zi <= zHigh) 
-      {
-          history[1] = 1;
-          history[2] = sidata.vn;
-          if ( atom->tag[i] == int (bubbleID) )
-              history[3] = 1;
-          else 
-              history[3] = 0;
-      }
-      else
-      {
-          history[1] = 0;
-          history[3] = 0;
-      } 
-          
-
+      double * const history = &sidata.contact_history[history_offset];      
+	  
       if (update_history) 
+	  {
+		  if (MathExtraLiggghts::compDouble(history[0], 0, 1e-16) && zi >= zLow && zi <= zHigh) 
+          {
+              history[1] = 1;
+              history[2] = sidata.vn;
+              if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID)  )
+                  history[3] = 1;
+              else 
+                  history[3] = 0;
+          }
+          else
+          {
+              history[1] = 0;
+              history[3] = 0;
+          } 
+
           history[0] += 1;
+	  }
+	  
 
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
@@ -419,7 +423,7 @@ namespace ContactModels
     void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
     {   
         if (scdata.contact_flags)
-            *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
+            *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
 
         double * const history = &scdata.contact_history[history_offset];
         history[0] = 0;
