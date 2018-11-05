@@ -90,21 +90,14 @@ namespace ContactModels
       zHigh(0.),
 	  zLow(0.),
 	  tc(0.),
-      history_offset(0),
+	  bubbleID(1.),
+      collision_offset_(0),
+	  collisionflag_(false),
       tangential_damping(false),
       fully_damping(false),
       limitForce(false),
-      displayedSettings(false),
-      elastic_potential_offset_(0),
-      elasticpotflag_(false),
-      fix_dissipated_(NULL),
-      dissipatedflag_(false),
-      dissipation_history_offset_(0)
+      displayedSettings(false)
     {
-      history_offset = hsetup->add_history_value("collisionTime", "0");
-	  hsetup->add_history_value("firstCollisionIndicator", "0");
-      hsetup->add_history_value("impactV", "0");
-      hsetup->add_history_value("bubbleCollisionIndicator", "0");
     }
 
     void registerSettings(Settings & settings)
@@ -112,45 +105,25 @@ namespace ContactModels
       settings.registerOnOff("tangential_damping", tangential_damping, true);
       settings.registerOnOff("fully_damping", fully_damping, false);
       settings.registerOnOff("limitForce", limitForce);
-      settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
-      settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
+      settings.registerOnOff("computeCollision", collisionflag_, false);
     }
 
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb)
     {
-        if (elasticpotflag_)
+        if (collisionflag_)
         {
-            elastic_potential_offset_ = cmb->get_history_offset("elastic_potential_normal");
-            if (elastic_potential_offset_ == -1)
+            // collision_offset_ = cmb->get_history_offset("collisionCount");
+			/*if (collision_offset_ == -1)
             {
-                elastic_potential_offset_ = hsetup->add_history_value("elastic_potential_normal", "0");
-                hsetup->add_history_value("elastic_force_normal_0", "1");
-                hsetup->add_history_value("elastic_force_normal_1", "1");
-                hsetup->add_history_value("elastic_force_normal_2", "1");
-                hsetup->add_history_value("elastic_torque_normal_i_0", "0");
-                hsetup->add_history_value("elastic_torque_normal_i_1", "0");
-                hsetup->add_history_value("elastic_torque_normal_i_2", "0");
-                hsetup->add_history_value("elastic_torque_normal_j_0", "0");
-                hsetup->add_history_value("elastic_torque_normal_j_1", "0");
-                hsetup->add_history_value("elastic_torque_normal_j_2", "0");
-                if (cmb->is_wall())
-                    hsetup->add_history_value("elastic_potential_wall", "0");
-                cmb->add_history_offset("elastic_potential_normal", elastic_potential_offset_);
-            }
-        }
-        if (dissipatedflag_)
-        {
-            if (cmb->is_wall())
-            {
-                fix_dissipated_ = static_cast<FixPropertyAtom*>(modify->find_fix_property("dissipated_energy_wall", "property/atom", "vector", 0, 0, "dissipated energy"));
-                dissipation_history_offset_ = cmb->get_history_offset("dissipation_force");
-                if (!dissipation_history_offset_)
-                    error->one(FLERR, "Internal error: Could not find dissipation history offset");
-            }
-            else
-                fix_dissipated_ = static_cast<FixPropertyAtom*>(modify->find_fix_property("dissipated_energy", "property/atom", "vector", 0, 0, "dissipated energy"));
-            if (!fix_dissipated_)
-                error->one(FLERR, "Surface model has not registered dissipated_energy fix");
+				collision_offset_ = hsetup->add_history_value("collisionCount","0");
+	            hsetup->add_history_value("collisionIndicator", "0");
+                hsetup->add_history_value("impactVelocity", "0");
+                hsetup->add_history_value("collisionIDIndicator", "0");
+			}*/		
+            collision_offset_ = hsetup->add_history_value("collisionCount","0");
+	        hsetup->add_history_value("collisionIndicator", "0");
+            hsetup->add_history_value("impactVelocity", "0");
+            hsetup->add_history_value("collisionIDIndicator", "0");			
         }
     }
 
@@ -175,51 +148,29 @@ namespace ContactModels
       if(force->cg_active())
         error->cg(FLERR,"model myhooke/stiffness");
       
-      neighbor->register_contact_dist_factor(1.01);
-
       // enlarge contact distance flag in case of elastic energy computation
       // to ensure that surfaceClose is called after a contact
-      if (elasticpotflag_)
+      if (collisionflag_)
           //set neighbor contact_distance_factor here
           neighbor->register_contact_dist_factor(1.01);
     }
 
-    // effective exponent for stress-strain relationship
-    
-    inline double stressStrainExponent()
+	// effective exponent for stress-strain relationship
+	inline double stressStrainExponent()
     {
       return 1.;
-    }
-
-    void dissipateElasticPotential(SurfacesCloseData &scdata)
+    } 
+	 
+    void collisionCompute(SurfacesCloseData &scdata)
     {
-        if (elasticpotflag_)
+        if (collisionflag_)
         {
-            double * const elastic_energy = &scdata.contact_history[elastic_potential_offset_];
-            if (scdata.is_wall)
-            {
-                // we need to calculate half an integration step which was left over to ensure no energy loss, but only for the elastic energy. The dissipation part is handled in fix_wall_gran_base.h.
-                double delta[3];
-                scdata.fix_mesh->triMesh()->get_global_vel(delta);
-                vectorScalarMult3D(delta, update->dt);
-                // -= because force is in opposite direction
-                // no *dt as delta is v*dt of the contact position
-                elastic_energy[0] -= (delta[0]*(elastic_energy[1]) +
-                                      delta[1]*(elastic_energy[2]) +
-                                      delta[2]*(elastic_energy[3]))*0.5
-                                     // from previous half step
-                                     + elastic_energy[10];
-                elastic_energy[10] = 0.0;
-            }
-            elastic_energy[1] = 0.0;
-            elastic_energy[2] = 0.0;
-            elastic_energy[3] = 0.0;
-            elastic_energy[4] = 0.0;
-            elastic_energy[5] = 0.0;
-            elastic_energy[6] = 0.0;
-            elastic_energy[7] = 0.0;
-            elastic_energy[8] = 0.0;
-            elastic_energy[9] = 0.0;
+            double * const collision_time = &scdata.contact_history[collision_offset_];
+            
+			collision_time[1] = 0.0;
+            collision_time[2] = 0.0;
+            collision_time[3] = 0.0;
+            collision_time[4] = 0.0;
         }
     }
 
@@ -239,35 +190,11 @@ namespace ContactModels
 
 	  double zi = sidata.zi;
 
-      // The normal model will be called during collision, 
-	  // and will be called for another time if there is comptute_pair_gran_local.
-      double * const history = &sidata.contact_history[history_offset];      
-	  
-      if (update_history) 
-	  {
-		  if (MathExtraLiggghts::compDouble(history[0], 0, 1e-16) && zi >= zLow && zi <= zHigh) 
-          {
-              history[1] = 1;
-              history[2] = sidata.vn;
-              if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID)  )
-                  history[3] = 1;
-              else 
-                  history[3] = 0;
-          }
-          else
-          {
-              history[1] = 0;
-              history[3] = 0;
-          } 
-
-          history[0] += 1;
-	  }
-	  
-
       double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
 	  double gamman = 0;
-      if (fully_damping)
+      
+	  if (fully_damping)
           gamman = 2*sqrt(meff*kn);
       else 
           gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype]; // betaeff is negative, gamman should be positive
@@ -292,10 +219,6 @@ namespace ContactModels
       {
           Fn = 0.0;
       }
-      
-	  if ( history[0] >= tc)
-            sidata.fluidContactNormal = 0;
-	  else sidata.fluidContactNormal = 1;
 
       sidata.Fn = Fn;
       sidata.kn = kn;
@@ -317,65 +240,31 @@ namespace ContactModels
       if (update_history)
       {
           // compute increment in elastic potential
-          if (elasticpotflag_)
+          if (collisionflag_)
           {
-              double * const elastic_energy = &sidata.contact_history[elastic_potential_offset_];
+              double * const collision_time = &sidata.contact_history[collision_offset_];
               // correct for wall influence
-              if (sidata.is_wall)
+              if (MathExtraLiggghts::compDouble(collision_time[0], 0, 1e-16) && zi >= zLow && zi <= zHigh) 
               {
-                  double delta[3];
-                  sidata.fix_mesh->triMesh()->get_global_vel(delta);
-                  vectorScalarMult3D(delta, update->dt);
-                  // -= because force is in opposite direction
-                  // no *dt as delta is v*dt of the contact position
-                    //printf("pela %e %e %e %e\n",  update->get_cur_time()-update->dt, deb, -sidata.radj, deb-sidata.radj);
-                  elastic_energy[0] -= (delta[0]*elastic_energy[1] +
-                                        delta[1]*elastic_energy[2] +
-                                        delta[2]*elastic_energy[3])*0.5
-                                       // from previous half step
-                                       + elastic_energy[10];
-                  elastic_energy[10] = -(delta[0]*Fn_contact*sidata.en[0] +
-                                         delta[1]*Fn_contact*sidata.en[1] +
-                                         delta[2]*Fn_contact*sidata.en[2])*0.5;
+                  collision_time[1] = 1;
+                  collision_time[2] = sidata.vn;
+                  if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID)  )
+                      collision_time[3] = 1;
+                  else 
+                      collision_time[3] = 0;
               }
-              elastic_energy[1] = -Fn_contact*sidata.en[0];
-              elastic_energy[2] = -Fn_contact*sidata.en[1];
-              elastic_energy[3] = -Fn_contact*sidata.en[2];
-              elastic_energy[4] = 0.0;
-              elastic_energy[5] = 0.0;
-              elastic_energy[6] = 0.0;
-              elastic_energy[7] = 0.0;
-              elastic_energy[8] = 0.0;
-              elastic_energy[9] = 0.0;
+              else
+              {
+                  collision_time[1] = 0;
+                  collision_time[3] = 0;
+              } 
+
+              collision_time[0] += 1;
+		      
+			  if ( collision_time[0] >= tc)
+                  sidata.fluidContactNormal = 0;
+	          else sidata.fluidContactNormal = 1;
           }
-          // compute increment in dissipated energy
-          if (dissipatedflag_)
-          {
-              double * const * const dissipated = fix_dissipated_->array_atom;
-              double * const dissipated_i = dissipated[sidata.i];
-              double * const dissipated_j = dissipated[sidata.j];
-              const double F_diss = -Fn_damping;
-              dissipated_i[1] += sidata.en[0]*F_diss;
-              dissipated_i[2] += sidata.en[1]*F_diss;
-              dissipated_i[3] += sidata.en[2]*F_diss;
-              if (sidata.j < atom->nlocal && !sidata.is_wall)
-              {
-                  dissipated_j[1] -= sidata.en[0]*F_diss;
-                  dissipated_j[2] -= sidata.en[1]*F_diss;
-                  dissipated_j[3] -= sidata.en[2]*F_diss;
-              }
-              else if (sidata.is_wall)
-              {
-                  double * const diss_force = &sidata.contact_history[dissipation_history_offset_];
-                  diss_force[0] -= sidata.en[0]*F_diss;
-                  diss_force[1] -= sidata.en[1]*F_diss;
-                  diss_force[2] -= sidata.en[2]*F_diss;
-              }
-          }
-          #ifdef NONSPHERICAL_ACTIVE_FLAG
-          if ((dissipatedflag_ || elasticpotflag_) && sidata.is_non_spherical)
-              error->one(FLERR, "Dissipation and elastic potential do not compute torque influence for nonspherical particles");
-          #endif
       }
 
       // apply normal force
@@ -423,15 +312,9 @@ namespace ContactModels
     void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&)
     {   
         if (scdata.contact_flags)
-            *scdata.contact_flags &= ~CONTACT_NORMAL_MODEL;
-
-        double * const history = &scdata.contact_history[history_offset];
-        history[0] = 0;
-        history[1] = 0;
-        history[2] = 0;
-        history[3] = 0;
+            *scdata.contact_flags |= CONTACT_NORMAL_MODEL;
         
-        dissipateElasticPotential(scdata);
+        collisionCompute(scdata);
     }
 
     void beginPass(SurfacesIntersectData&, ForceData&, ForceData&){}
@@ -442,15 +325,11 @@ namespace ContactModels
     double ** k_t;
     double ** betaeff;
     double zHigh, zLow, tc, bubbleID;
-    int history_offset;
+    int collision_offset_;
+	bool collisionflag_;
     bool tangential_damping, fully_damping;
     bool limitForce;
     bool displayedSettings;
-    int elastic_potential_offset_;
-    bool elasticpotflag_;
-    FixPropertyAtom *fix_dissipated_;
-    bool dissipatedflag_;
-    int dissipation_history_offset_;
   };
 }
 }
