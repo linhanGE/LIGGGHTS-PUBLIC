@@ -167,10 +167,10 @@ namespace ContactModels
         {
             double * const collision_time = &scdata.contact_history[collision_offset_];
             
-			collision_time[1] = 0.0;
+			collision_time[0] = 0.0;
+            collision_time[1] = 0.0;
             collision_time[2] = 0.0;
             collision_time[3] = 0.0;
-            collision_time[4] = 0.0;
         }
     }
 
@@ -239,7 +239,6 @@ namespace ContactModels
       // energy balance terms
       if (update_history)
       {
-          // compute increment in elastic potential
           if (collisionflag_)
           {
               double * const collision_time = &sidata.contact_history[collision_offset_];
@@ -248,7 +247,8 @@ namespace ContactModels
               {
                   collision_time[1] = 1;
                   collision_time[2] = sidata.vn;
-                  if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID)  )
+                  if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID) )
+				  // if ( atom->tag[i] == int (bubbleID))	  
                       collision_time[3] = 1;
                   else 
                       collision_time[3] = 0;
