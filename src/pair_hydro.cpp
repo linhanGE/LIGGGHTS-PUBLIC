@@ -74,7 +74,7 @@ void PairHydro::compute(int eflag, int vflag)
 	inum = list->inum;
 	ilist = list->ilist;
 	numneigh = list->numneigh;
-	firstneigh = list->firstneigh;
+	firstneigh = list->firstneigh;  // point first neighbor
 
 	// loop over neighbors of my atoms
 

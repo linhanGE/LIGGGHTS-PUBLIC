@@ -87,8 +87,6 @@ namespace ContactModels
       k_n(NULL),
       k_t(NULL),
       betaeff(NULL),
-      zHigh(0.),
-	  zLow(0.),
 	  tc(0.),
 	  bubbleID(1.),
       collision_offset_(0),
@@ -131,16 +129,12 @@ namespace ContactModels
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
       registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff);
-      registry.registerProperty("zHigh", &MODEL_PARAMS::createZHighMHS);
-	  registry.registerProperty("zLow", &MODEL_PARAMS::createZLowMHS);
 	  registry.registerProperty("tc", &MODEL_PARAMS::createTcMHS);
       registry.registerProperty("bubbleID", &MODEL_PARAMS::createBubbleIDMHS);
 
       registry.connect("k_n", k_n,"model myhooke/stiffness");
       registry.connect("k_t", k_t,"model myhooke/stiffness");
       registry.connect("betaeff", betaeff,"model myhooke/stiffness");
-      registry.connect("zHigh", zHigh, "model myhooke/stiffness");
-	  registry.connect("zLow", zLow, "model myhooke/stiffness");
 	  registry.connect("tc", tc, "model myhooke/stiffness");
       registry.connect("bubbleID", bubbleID, "model myhooke/stiffness");
 
@@ -152,7 +146,7 @@ namespace ContactModels
       // to ensure that surfaceClose is called after a contact
       if (collisionflag_)
           //set neighbor contact_distance_factor here
-          neighbor->register_contact_dist_factor(1.01);
+          neighbor->register_contact_dist_factor(1.1);
     }
 
 	// effective exponent for stress-strain relationship
@@ -188,9 +182,7 @@ namespace ContactModels
 
       double meff=sidata.meff;  // already consider the freeze particle in pair_gran_base.h Line 394
 
-	  double zi = sidata.zi;
-
-      double kn = k_n[itype][jtype];
+	  double kn = k_n[itype][jtype];
 	  double kt = k_t[itype][jtype];
 	  double gamman = 0;
       
@@ -243,7 +235,7 @@ namespace ContactModels
           {
               double * const collision_time = &sidata.contact_history[collision_offset_];
               // correct for wall influence
-              if (MathExtraLiggghts::compDouble(collision_time[0], 0, 1e-16) && zi >= zLow && zi <= zHigh) 
+              if (MathExtraLiggghts::compDouble(collision_time[0], 0, 1e-16)) 
               {
                   collision_time[1] = 1;
                   collision_time[2] = sidata.vn;
@@ -324,7 +316,7 @@ namespace ContactModels
     double ** k_n;
     double ** k_t;
     double ** betaeff;
-    double zHigh, zLow, tc, bubbleID;
+    double tc, bubbleID;
     int collision_offset_;
 	bool collisionflag_;
     bool tangential_damping, fully_damping;
