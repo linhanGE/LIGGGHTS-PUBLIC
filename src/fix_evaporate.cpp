@@ -91,6 +91,7 @@ FixEvaporate::~FixEvaporate()
 int FixEvaporate::setmask()
 {
   int mask = 0;
+  mask |= POST_INTEGRATE;
   mask |= PRE_EXCHANGE;
   return mask;
 }
@@ -123,20 +124,11 @@ void FixEvaporate::init()
   }
 }
 
-/* ----------------------------------------------------------------------
-   perform particle deletion
-   done before exchange, borders, reneighbor
-   so that ghost atoms and neighbor lists will be correct
-------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
 
-void FixEvaporate::pre_exchange()
+void FixMassflowMesh::post_integrate()
 {
-  int i,iwhichglobal,iwhichlocal;
-  int ndel,ndeltopo[4];
-
-  // if (update->ntimestep != next_reneighbor) return;
-
-  // grow list and mark arrays if necessary
+  int i;
 
   if (atom->nlocal > nmax) {
     memory->destroy(list);
@@ -166,6 +158,18 @@ void FixEvaporate::pre_exchange()
       if (domain->regions[iregion]->match(x[i][0],x[i][1],x[i][2]))
         list[ncount++] = i;
   }
+}
+
+/* ----------------------------------------------------------------------
+   perform particle deletion
+   done before exchange, borders, reneighbor
+   so that ghost atoms and neighbor lists will be correct
+------------------------------------------------------------------------- */
+
+void FixEvaporate::pre_exchange()
+{
+  int i,iwhichglobal,iwhichlocal;
+  int ndel,ndeltopo[4];
 
   int nall,nbefore;
   MPI_Allreduce(&ncount,&nall,1,MPI_INT,MPI_SUM,world);
