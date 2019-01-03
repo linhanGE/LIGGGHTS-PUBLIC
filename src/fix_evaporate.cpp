@@ -126,7 +126,7 @@ void FixEvaporate::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixMassflowMesh::post_integrate()
+void FixEvaporate::post_integrate()
 {
   int i;
 
