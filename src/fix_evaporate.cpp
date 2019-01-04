@@ -72,6 +72,7 @@ FixEvaporate::FixEvaporate(LAMMPS *lmp, int narg, char **arg) :
   ndeleted = 0;
 
   nmax = 0;
+  ncount = 0;
   list = NULL;
   mark = NULL;
 }
@@ -148,7 +149,6 @@ void FixEvaporate::post_integrate()
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
 
-  int ncount = 0;
   int keepGroupbit = group->bitmask[keepGroup];
 
   for (i = 0; i < nlocal; i++) {

@@ -30,6 +30,7 @@ class FixEvaporate : public Fix {
   ~FixEvaporate();
   int setmask();
   void init();
+  void post_integrate();
   void pre_exchange();
   double compute_scalar();
   double memory_usage();
@@ -39,7 +40,7 @@ class FixEvaporate : public Fix {
   int ndeleted;
   char *idregion;
 
-  int nmax;
+  int nmax,ncount;
   int *list,*mark;
 
   class RanPark *random;
