@@ -199,6 +199,11 @@ void DeleteAtoms::delete_region(int narg, char **arg)
   if (narg < 2) error->all(FLERR,"Illegal delete_atoms command");
 
   int iregion = domain->find_region(arg[1]);
+
+  int *mask = atom->mask;
+  int keepGroup = group->find(arg[2]);
+  int keepGroupbit = group->bitmask[keepGroup];
+  
   if (iregion == -1) error->all(FLERR,"Could not find delete_atoms region ID");
   options(narg-2,&arg[2]);
 
@@ -211,7 +216,11 @@ void DeleteAtoms::delete_region(int narg, char **arg)
   double **x = atom->x;
 
   for (int i = 0; i < nlocal; i++)
-    if (domain->regions[iregion]->match(x[i][0],x[i][1],x[i][2])) dlist[i] = 1;
+  {
+    if (mask[i] & keepGroupbit)
+      continue;
+    else if (domain->regions[iregion]->match(x[i][0],x[i][1],x[i][2])) dlist[i] = 1;
+  }
   if (mol_flag == 0) return;
 
   // delete entire molecules if any atom in molecule was deleted

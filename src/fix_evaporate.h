@@ -35,7 +35,8 @@ class FixEvaporate : public Fix {
   double memory_usage();
 
  private:
-  int nflux,keepGroup,iregion;
+  int nevery,nflux,iregion,keepGroup;
+  int molflag;
   int ndeleted;
   char *idregion;
 
