@@ -88,7 +88,7 @@ ComputePairGranLocal::ComputePairGranLocal(LAMMPS *lmp, int &iarg, int narg, cha
 
   // if further args, store only the properties that are listed
   if(narg > iarg)
-     posflag = velflag = idflag = fflag = fnflag = ftflag = torqueflag = torquenflag = torquetflag = histflag = areaflag = deltaflag = heatflag = cpflag = msidflag = 0;
+     posflag = velflag = idflag = fflag = fnflag = ftflag = torqueflag = torquenflag = torquetflag = histflag = areaflag = deltaflag = heatflag = cpflag = msidflag = capflag = 0;
 
   for (; iarg < narg; iarg++)
   {
@@ -108,6 +108,7 @@ ComputePairGranLocal::ComputePairGranLocal(LAMMPS *lmp, int &iarg, int narg, cha
     else if (strcmp(arg[iarg],"heatFlux") == 0) heatflag = 1;
     else if (strcmp(arg[iarg],"contactPoint") == 0) cpflag = 1;
     else if (strcmp(arg[iarg],"ms_id") == 0) msidflag = 1;
+    else if (strcmp(arg[iarg],"capillary") == 0) capflag = 1;
     else if (strcmp(arg[iarg],"verbose") == 0) verbose = true;
     else if (strcmp(arg[iarg],"extraSurfDistance") == 0) error->all(FLERR,"this keyword is deprecated; neighbor->contactDistanceFactor is now used directly");
     else if(0 == strcmp(style,"wall/gran/local") || 0 == strcmp(style,"pair/gran/local"))
@@ -275,7 +276,7 @@ void ComputePairGranLocal::init_cpgl(bool requestflag)
   if(histflag && dnum == 0) error->all(FLERR,"Compute pair/gran/local or wall/gran/local can not calculate history values since pair or wall style does not compute them");
   // standard values: pos1,pos2,id1,id2,extra id for mesh wall,force,torque,contact area
 
-  nvalues = posflag*6 + velflag*6 + idflag*3 + fflag*3 + fnflag*3 + ftflag*3 + torqueflag*3 + torquenflag*3 + torquetflag*3 + histflag*dnum + areaflag + deltaflag + heatflag + cpflag*3 + msidflag*2;
+  nvalues = posflag*6 + velflag*6 + idflag*3 + fflag*3 + fnflag*3 + ftflag*3 + torqueflag*3 + torquenflag*3 + torquetflag*3 + histflag*dnum + areaflag + deltaflag + heatflag + cpflag*3 + msidflag*2 + capflag;
   size_local_cols = nvalues;
 
 }
@@ -414,7 +415,7 @@ int ComputePairGranLocal::count_wallcontacts(int & nCountWithOverlap)
    add data from particle-particle contact on this proc
 ------------------------------------------------------------------------- */
 
-void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point)
+void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point,double capillary)
 {
     
     double del[3],r,rsq,radi,radj,contactArea;
@@ -605,6 +606,10 @@ void ComputePairGranLocal::add_pair(int i,int j,double fx,double fy,double fz,do
     {
         array[ipair][n++] = static_cast<double>(fix_ms->belongs_to(i));
         array[ipair][n++] = static_cast<double>(fix_ms->belongs_to(j));
+    }
+    if(capflag)
+    {
+        array[ipair][n++] = capillary;
     }
 
     ipair++;

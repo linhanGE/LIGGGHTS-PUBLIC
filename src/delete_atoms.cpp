@@ -205,7 +205,7 @@ void DeleteAtoms::delete_region(int narg, char **arg)
   int keepGroupbit = group->bitmask[keepGroup];
   
   if (iregion == -1) error->all(FLERR,"Could not find delete_atoms region ID");
-  options(narg-2,&arg[2]);
+  options(narg-3,&arg[3]);
 
   // allocate and initialize deletion list
 

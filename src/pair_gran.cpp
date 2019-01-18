@@ -809,7 +809,7 @@ void PairGran::cpl_add_pair(LCM::SurfacesIntersectData & sidata, LCM::ForceData 
 #else
         NULL;
 #endif
-    cpl_->add_pair(sidata.i, sidata.j, fx,fy,fz,tor1,tor2,tor3,sidata.contact_history, contact_point);
+    cpl_->add_pair(sidata.i, sidata.j, fx,fy,fz,tor1,tor2,tor3,sidata.contact_history, contact_point,sidata.capillary);
 }
 
 void PairGran::cpl_pair_finalize()

@@ -175,7 +175,9 @@ struct SurfacesIntersectData : SurfacesCloseData {
 
   double mi;    
   double mj;
-  double meff;  
+  double meff;
+
+  double capillary  
 
   mutable double P_diss; 
 

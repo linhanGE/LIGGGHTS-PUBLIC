@@ -158,6 +158,7 @@ namespace ContactModels {
 		{
 		    const double sintheta_alpha = sin(theta)*cosalpha-cos(theta)*sinalpha;
 			Fca = -2*M_PI*sigma*rp*sinalpha*sintheta_alpha;
+			sidata.capillary = Fca;
             // std::cout << "capillary force " << Fca <<"  " << sinalpha << "  " << sintheta_alpha << std::endl; 
 	    }
 

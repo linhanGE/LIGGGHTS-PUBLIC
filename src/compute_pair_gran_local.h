@@ -184,7 +184,7 @@ class ComputePairGranLocal : public Compute {
 
   int ipair;
 
-  int posflag,velflag,idflag,fflag,fnflag,ftflag,torqueflag,torquenflag,torquetflag,histflag,areaflag,deltaflag,heatflag,cpflag,msidflag;
+  int posflag,velflag,idflag,fflag,fnflag,ftflag,torqueflag,torquenflag,torquetflag,histflag,areaflag,deltaflag,heatflag,cpflag,msidflag,capflag;
 
   bool   verbose;
 
