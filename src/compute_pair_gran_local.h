@@ -70,7 +70,7 @@ class ComputePairGranLocal : public Compute {
   void compute_local();
   double memory_usage();
   void reference_deleted();
-  virtual void add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point);
+  virtual void add_pair(int i,int j,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist, const double * const contact_point, double capillary);
   virtual void add_heat(int i,int j,double hf);
   virtual void add_wall_1(int iFMG,int iTri,int iP,double *contact_point,double *v_wall);
   virtual void add_wall_2(int i,double fx,double fy,double fz,double tor1,double tor2,double tor3,double *hist,double rsq, double *normal_);
