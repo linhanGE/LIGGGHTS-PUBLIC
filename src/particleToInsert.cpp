@@ -115,6 +115,7 @@ int ParticleToInsert::insert()
         //{
                 
                 inserted++;
+                if (domain->dimension == 2) x_ins[i][2] =0;
                 if(atom_type_vector_flag)
                     atom->avec->create_atom(atom_type_vector[i],x_ins[i]);
                 else
