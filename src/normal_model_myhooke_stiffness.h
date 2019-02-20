@@ -93,6 +93,7 @@ namespace ContactModels
 	  collisionflag_(false),
       tangential_damping(false),
       fully_damping(false),
+      elasticForceOff(false),
       limitForce(false),
       displayedSettings(false)
     {
@@ -102,6 +103,7 @@ namespace ContactModels
     {
       settings.registerOnOff("tangential_damping", tangential_damping, true);
       settings.registerOnOff("fully_damping", fully_damping, false);
+      settings.registerOnOff("elasticForceOff", elasticForceOff, false);
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeCollision", collisionflag_, false);
     }
@@ -173,6 +175,9 @@ namespace ContactModels
       
       if (sidata.contact_flags)
           *sidata.contact_flags |= CONTACT_NORMAL_MODEL;
+      
+      
+          
       const bool update_history = sidata.computeflag && sidata.shearupdate;
 	  
 	  const int itype = sidata.itype;
@@ -201,11 +206,18 @@ namespace ContactModels
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
       kt /= force->nktv2p;
+            
+      double Fn, Fn_damping, Fn_contact;
 
-      const double Fn_damping = -gamman*sidata.vn;    
-      const double Fn_contact = kn*sidata.deltan;
-      double Fn = Fn_damping + Fn_contact;
-
+      if (elasticForceOff)
+          Fn = 0;
+      else
+      {
+          Fn_damping = -gamman*sidata.vn;    
+          Fn_contact = kn*sidata.deltan;
+          Fn = Fn_damping + Fn_contact;    
+      }
+      
       //limit force to avoid the artefact of negative repulsion force
       if(limitForce && (Fn<0.0) )
       {
@@ -229,7 +241,7 @@ namespace ContactModels
       #endif
 
       // energy balance terms
-      if (update_history)
+      if (update_history && !elasticForceOff)
       {
           if (collisionflag_)
           {
@@ -319,7 +331,7 @@ namespace ContactModels
     double tc, bubbleID;
     int collision_offset_;
 	bool collisionflag_;
-    bool tangential_damping, fully_damping;
+    bool tangential_damping, fully_damping,elasticForceOff;
     bool limitForce;
     bool displayedSettings;
   };

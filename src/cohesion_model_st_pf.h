@@ -72,6 +72,12 @@ namespace MODEL_PARAMS
 	  MatrixProperty* surfaceTensionMatrix = MODEL_PARAMS::createPerTypePairProperty(registry, "surfaceTension", caller);
 	  return surfaceTensionMatrix;
 	}
+
+	inline static ScalarProperty* createGravity(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+		ScalarProperty* g_Scalar = MODEL_PARAMS::createScalarProperty(registry, "gravity", caller);
+		return g_Scalar;
+	}
 }
 
 namespace LIGGGHTS {
@@ -106,9 +112,11 @@ namespace ContactModels {
 		registry.registerProperty("surfaceTension", &MODEL_PARAMS::createSurfaceTensionHS);
 		registry.registerProperty("contactAngle", &MODEL_PARAMS::createContactAngleHS);
 		registry.registerProperty("liquidDensity", &MODEL_PARAMS::createLiquidDensity);
+		registry.registerProperty("gravity", &MODEL_PARAMS::createGravity);
 		registry.connect("surfaceTension",surfaceTension ,"cohesion_model st/pf");
 		registry.connect("contactAngle", contactAngle,"cohesion_model st/pf");
 		registry.connect("liquidDensity", liquidDensity,"cohesion_model st/pf");
+		registry.connect("gravity",gravity ,"cohesion_model st/pf");
 		
 		// error checks on coarsegraining
 		if(force->cg_active())
@@ -117,7 +125,6 @@ namespace ContactModels {
 
 	void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
 	{
-	   
 		//r is the distance between the sphere's centers
 		const double ri = sidata.radi;
 		const double rj = sidata.radj;
@@ -128,18 +135,17 @@ namespace ContactModels {
 
 		const double rhoi = sidata.densityi;
 		const double rhoj = sidata.densityj;
-        const double deltan = sidata.deltan;
-        
-		double rb = 0, rp = 0, d = 0, Ri = 0, deltaz = 0, zp = 0, zb = 0;
+        const double d = sqrt(sidata.rsq);
+
+		double rb = 0, rp = 0, Ri = 0, zp = 0, zb = 0;
+
         if ( rhoi/rhoj > 500 || rhoi/rhoj < 500 )
 		{  
             rp = rhoi/rhoj > 500 ? ri : rj;
 		    rb = rhoi/rhoj > 500 ? rj : ri;
 		    zp = rhoi/rhoj > 500 ? zi : zj;
 		    zb = rhoi/rhoj > 500 ? zi : zj;
-            d = rb+rp-deltan;
             Ri = sqrt((-d+rp-rb)*(-d-rp+rb)*(-d+rp+rb)*(d+rp+rb))/(2*d);
-			deltaz = abs(zi-zj);
         }
         else 
         {
@@ -153,35 +159,33 @@ namespace ContactModels {
 		double Fca = 0,Fp = 0;
 		const double sinalpha = Ri/rp;
 		const double cosalpha = (d*d+rp*rp-rb*rb)/(2*d*rp);
+        const double cosphi = (d*d+rb*rb-rp*rp)/(2*d*rb);
 	  
 		if (capillary_) 
 		{
 		    const double sintheta_alpha = sin(theta)*cosalpha-cos(theta)*sinalpha;
-			Fca = -2*M_PI*sigma*rp*sinalpha*sintheta_alpha;
+			Fca = -2*M_PI*sigma*Ri*sintheta_alpha;
 			sidata.capillary = Fca;
             // std::cout << "capillary force " << Fca <<"  " << sinalpha << "  " << sintheta_alpha << std::endl; 
 	    }
 
 		if (pressure_) 
 		{
-		    const double n = rb - (rp-rb+d)*(rp+rb-d)/(2*d);
-			const double m = deltaz/d*n;
-            double H = 0;         
-			if (zp > zb) H = rb - m;
-			else  H = rb+m;
-			Fp = M_PI*rp*rp*sinalpha*sinalpha*(liquidDensity*9.81*H-2*sigma/rb);
-            // std::cout << "pressure force " << Fp <<"rb " << rb << std::endl; 
+			const double m = cosphi*rb;
+            double H = abs(zb+rb-(zp-zb)*m/d);
+			Fp = M_PI*rp*rp*sinalpha*sinalpha*(2*sigma/rb-liquidDensity*gravity*H);
+			// cout << Fp << endl;
 		}
-         
+        
         const double fx = (Fca + Fp) * sidata.en[0];
 		const double fy = (Fca + Fp) * sidata.en[1];
 		const double fz = (Fca + Fp) * sidata.en[2];
-
+        
 		if (tangentialReduce_) sidata.Fn += Fca + Fp;
           
 		if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
         
-        if (!sidata.is_wall) 
+        if (!sidata.is_wall)
 		{
             i_forces.delta_F[0] += fx;
 		    i_forces.delta_F[1] += fy;
@@ -215,7 +219,7 @@ namespace ContactModels {
   private:
 	double **surfaceTension;
 	double **contactAngle;
-	double liquidDensity;
+	double liquidDensity, gravity;
 	bool tangentialReduce_,capillary_,pressure_;
   };
 }
