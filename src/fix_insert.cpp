@@ -557,8 +557,8 @@ void FixInsert::init()
         error->fix_error(FLERR,this,"Fix insert requires atom attributes radius, rmass");
     if (domain->triclinic)
         error->fix_error(FLERR,this,"Cannot use with triclinic box");
-    /*if (domain->dimension != 3)
-        error->fix_error(FLERR,this,"Can use fix insert for 3d simulations only");*/
+    if (domain->dimension != 3)
+        error->fix_error(FLERR,this,"Can use fix insert for 3d simulations only");
     
     fix_multisphere = static_cast<FixMultisphere*>(modify->find_fix_style("multisphere", 0));
     if(!fix_multisphere) multisphere = NULL;

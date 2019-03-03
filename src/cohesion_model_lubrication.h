@@ -31,9 +31,7 @@
 -------------------------------------------------------------------------
 	Contributing author and copyright for this file:
 
-	Christoph Kloss (DCS Computing GmbH, Linz)
-	Christoph Kloss (JKU Linz)
-	Richard Berger (JKU Linz)
+	Linhan Ge (University of Newcastle)
 
 	Copyright 2012-     DCS Computing GmbH, Linz
 	Copyright 2009-2012 JKU Linz

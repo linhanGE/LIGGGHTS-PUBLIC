@@ -68,7 +68,8 @@ namespace ContactModels
       elasticpotflag_(false),
       fix_dissipated_(NULL),
       dissipatedflag_(false),
-      dissipation_history_offset_(0)
+      dissipation_history_offset_(0),
+      fully_damping(false)
     {
     }
 
@@ -78,6 +79,7 @@ namespace ContactModels
       settings.registerOnOff("limitForce", limitForce);
       settings.registerOnOff("computeElasticPotential", elasticpotflag_, false);
       settings.registerOnOff("computeDissipatedEnergy", dissipatedflag_, false);
+      settings.registerOnOff("fully_damping", fully_damping, false);
     }
 
     inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb)
@@ -190,9 +192,15 @@ namespace ContactModels
       double meff=sidata.meff;
 
       double kn = k_n[itype][jtype];
-	  double kt = k_t[itype][jtype];
-	  const double gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype];    // betaeff is negative, gamman should be positive
-	  const double gammat = tangential_damping ? gamman : 0.0;
+	    double kt = k_t[itype][jtype];
+	    double gamman = 0;    // betaeff is negative, gamman should be positive
+
+	    if (fully_damping)
+          gamman = 2*sqrt(meff*kn);
+      else 
+          gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype]; // betaeff is negative, gamman should be positive
+
+	    const double gammat = tangential_damping ? gamman : 0.0;
 
       if(!displayedSettings)
       {
@@ -358,6 +366,7 @@ namespace ContactModels
     FixPropertyAtom *fix_dissipated_;
     bool dissipatedflag_;
     int dissipation_history_offset_;
+    bool fully_damping;
   };
 }
 }

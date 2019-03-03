@@ -87,8 +87,8 @@ FixTemplateSphere::FixTemplateSphere(LAMMPS *lmp, int narg, char **arg) :
     vol_limit(0.0),
     relative(false)
 {
-  /*if (domain->dimension != 3)
-    error->fix_error(FLERR,this,"this fix is for 3D simulations only");*/
+  if (domain->dimension != 3)
+    error->fix_error(FLERR,this,"this fix is for 3D simulations only");
 
   restart_global = 1;
 
