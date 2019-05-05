@@ -95,6 +95,12 @@ namespace MODEL_PARAMS
 		return lamda_Scalar;
 	}
 
+	inline static ScalarProperty* createHfF(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+		ScalarProperty* hf_Scalar = MODEL_PARAMS::createScalarProperty(registry, "hf", caller);
+		return hf_Scalar;
+	}
+
 	inline static MatrixProperty* createMinSeparationDistF(PropertyRegistry & registry, const char * caller, bool sanity_checks)
 	{
 	  MatrixProperty* minSeparationDistMatrix = MODEL_PARAMS::createPerTypePairProperty(registry, "minSeparationDist", caller);
@@ -112,6 +118,19 @@ namespace MODEL_PARAMS
 	  ScalarProperty* muScalar = MODEL_PARAMS::createScalarProperty(registry, "mu", caller);
 	  return muScalar;
 	}
+
+    inline static ScalarProperty* createKfF(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* kfScalar = MODEL_PARAMS::createScalarProperty(registry, "kf", caller);
+	  return kfScalar;
+	}
+
+	inline static ScalarProperty* createCoRF(PropertyRegistry & registry, const char * caller, bool sanity_checks)
+	{
+	  ScalarProperty* CoRScalar = MODEL_PARAMS::createScalarProperty(registry, "CoR", caller);
+	  return CoRScalar;
+	}
+
 }
 
 namespace LIGGGHTS {
@@ -128,11 +147,15 @@ namespace ContactModels {
 		A(0.),
 		K(0.),
 		lamda(0.),
+		hf(0.),
+		kf(0.),
+		CoR(0.),
 		tangentialReduce_(false),
-		capillary_(true),
-		lubrication_(true),
-		vdw_(true),
-		hydrophobic_(true)
+		capillary_(false),
+		lubrication_(false),
+		vdw_(false),
+		hydrophobic_(false),
+		liquidFilm_(false)
 	{
 		
 	}
@@ -140,10 +163,11 @@ namespace ContactModels {
 	void registerSettings(Settings& settings) 
 	{
 		settings.registerOnOff("tangential_reduce",tangentialReduce_,false);
-		settings.registerOnOff("capillary",capillary_,true);
-		settings.registerOnOff("lubrication",lubrication_,true);
-		settings.registerOnOff("vdw",vdw_,true);
-		settings.registerOnOff("hydrophobic",hydrophobic_,true);
+		settings.registerOnOff("capillary",capillary_,false);
+		settings.registerOnOff("lubrication",lubrication_,false);
+		settings.registerOnOff("vdw",vdw_,false);
+		settings.registerOnOff("hydrophobic",hydrophobic_,false);
+		settings.registerOnOff("liquidFilm",liquidFilm_,false);
 	}
 
 	inline void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) {}
@@ -156,7 +180,10 @@ namespace ContactModels {
 		registry.registerProperty("A", &MODEL_PARAMS::createAF);
 		registry.registerProperty("K", &MODEL_PARAMS::createKF);
         registry.registerProperty("lamda", &MODEL_PARAMS::createLamdaF);
+		registry.registerProperty("hf", &MODEL_PARAMS::createHfF);
 		registry.registerProperty("mu", &MODEL_PARAMS::createMuF);
+		registry.registerProperty("kf", &MODEL_PARAMS::createKfF);
+		registry.registerProperty("CoR", &MODEL_PARAMS::createCoRF);
 		registry.registerProperty("minSeparationDist", &MODEL_PARAMS::createMinSeparationDistF);
 		registry.registerProperty("maxSeparationDistRatio", &MODEL_PARAMS::createMaxSeparationDistRatioF);
                 
@@ -166,7 +193,10 @@ namespace ContactModels {
 		registry.connect("A", A, "cohesion_model flotation");
 		registry.connect("K",K ,"cohesion_model flotation");
         registry.connect("lamda",lamda ,"cohesion_model flotation");
+		registry.connect("hf",hf ,"cohesion_model flotation");
 		registry.connect("mu", mu,"cohesion_model flotation");
+		registry.connect("kf", kf,"cohesion_model flotation");
+        registry.connect("CoR", CoR,"cohesion_model flotation");
 		registry.connect("minSeparationDist", minSeparationDist,"cohesion_model flotation");
 		registry.connect("maxSeparationDistRatio", maxSeparationDistRatio,"cohesion_model flotation");
 		
@@ -190,36 +220,37 @@ namespace ContactModels {
 
 		double rb = 0, rp = 0, Ri = 0, Fca=0, sinalpha=0, cosalpha=0, sintheta_alpha=0;
 
-        if ( rhoi/rhoj > 500 || rhoi/rhoj < 500 )
-		{  
-	        if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
+		const double rhoRatio = rhoi/rhoj;
 
-            rp = rhoi/rhoj > 500 ? ri : rj;
-		    rb = rhoi/rhoj > 500 ? rj : ri;
-            Ri = sqrt((-d+rp-rb)*(-d-rp+rb)*(-d+rp+rb)*(d+rp+rb))/(2*d);
-			sinalpha = Ri/rp;
-		    cosalpha = (d*d+rp*rp-rb*rb)/(2*d*rp);
-	        sintheta_alpha = sin(theta)*cosalpha-cos(theta)*sinalpha;
+        if ( (rhoRatio > 500) || (rhoRatio < 0.002) )
+		{  
+		  if(sidata.contact_flags) *sidata.contact_flags |= CONTACT_COHESION_MODEL;
+          rp = rhoi/rhoj > 500 ? ri : rj;
+		  rb = rhoi/rhoj > 500 ? rj : ri;
+          Ri = sqrt((-d+rp-rb)*(-d-rp+rb)*(-d+rp+rb)*(d+rp+rb))/(2*d);
+		  sinalpha = Ri/rp;
+		  cosalpha = (d*d+rp*rp-rb*rb)/(2*d*rp);
+	      sintheta_alpha = sin(theta)*cosalpha-cos(theta)*sinalpha;
         }
         else 
         {
-            if(sidata.contact_flags) *sidata.contact_flags &= ~CONTACT_COHESION_MODEL;
+			if(sidata.contact_flags) *sidata.contact_flags &= ~CONTACT_COHESION_MODEL;
                 return;
         }
 		
-		if (capillary_) 
+		if ( capillary_ ) 
 		{
-     		Fca = -2*M_PI*sigma*Ri*sintheta_alpha;
+     	    Fca = -2*M_PI*sigma*Ri*sintheta_alpha;
 			sidata.capillary = Fca;
             // std::cout << "capillary force " << Fca <<"  " << sinalpha << "  " << sintheta_alpha << std::endl; 
 	    }
-        
+       
         const double fx = Fca * sidata.en[0];
 		const double fy = Fca * sidata.en[1];
 		const double fz = Fca * sidata.en[2];
         
 		if (tangentialReduce_) sidata.Fn += Fca;
-       
+
         if (!sidata.is_wall)
 		{
             i_forces.delta_F[0] += fx;
@@ -248,89 +279,121 @@ namespace ContactModels {
 
 	void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
 	{
-    	const int itype = scdata.itype;
+        const int itype = scdata.itype;
 		const int jtype = scdata.jtype;
 		const double rhoi = scdata.densityi;
 		const double rhoj = scdata.densityj;
-		const double rsq = scdata.rsq;
-		const double r = sqrt(rsq);
-		const double rinv =  1.0/r;
+		const double r = sqrt(scdata.rsq);
+		
 		const double radsum = scdata.radsum;
 		const double radi = scdata.radi;
 		const double radj = scdata.radj;
 		const double rEff = radi*radj / radsum;
+		const double *rmass = atom->rmass;
+		const int i = scdata.i;
+		const int j = scdata.j;
+
+		const double rhoRatio = rhoi/rhoj;
 	    
-	    if (rhoi/rhoj > 500 || rhoi/rhoj < 500)
-			if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
-		else 
-			return;
-		
-		double d = r - radsum;
-	
-		d = d > minSeparationDist[itype][jtype] ? d : minSeparationDist[itype][jtype];
-			
-		const double dx = scdata.delta[0];
-		const double dy = scdata.delta[1];
-		const double dz = scdata.delta[2];
-		const double enx = dx * rinv;
-		const double eny = dy * rinv;
-		const double enz = dz * rinv;
-		// relative translational velocity
-		const double vr1 = scdata.v_i[0] - scdata.v_j[0];
-		const double vr2 = scdata.v_i[1] - scdata.v_j[1];
-		const double vr3 = scdata.v_i[2] - scdata.v_j[2];
-		const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-		
-        double F_lubrication=0;
-
-		if (d <= maxSeparationDistRatio*radsum && lubrication_)
-		    F_lubrication = -6*M_PI*mu*vn*rEff*rEff/d;
-        
-		double Fvdw = 0, Fh = 0;
-		double H = r - radsum;
-		H = std::max(XDLVOCutOff,H);
-
-        // hydrophobic force
-		if ( hydrophobic_) Fh = -rEff*K*exp(-H/lamda);
-        
-		// van-der walls force
-		if (vdw_) Fvdw = A*rEff/(6*H*H);
-
-		const double fx = (F_lubrication + Fvdw + Fh) * enx;       //en represent the normal direction vector, en[0] is the x coordinate
-		const double fy = (F_lubrication + Fvdw + Fh) * eny;				 
-		const double fz = (F_lubrication + Fvdw + Fh) * enz;		
-		
-		scdata.has_force_update = true;
-		
-        if (!scdata.is_wall)
+	    if ((rhoRatio > 500) || (rhoRatio < 0.002))
 		{
-            i_forces.delta_F[0] += fx;
-		    i_forces.delta_F[1] += fy;
-		    i_forces.delta_F[2] += fz;
+			if(scdata.contact_flags) *scdata.contact_flags |= CONTACT_COHESION_MODEL;
+			
+			double d = r - radsum;
+		
+			d = d > minSeparationDist[itype][jtype] ? d : minSeparationDist[itype][jtype];
+				
+			const double dx = scdata.delta[0];
+			const double dy = scdata.delta[1];
+			const double dz = scdata.delta[2];
+			const double rinv =  1.0/r;
+			const double enx = dx * rinv;
+			const double eny = dy * rinv;
+			const double enz = dz * rinv;
 
-		    j_forces.delta_F[0] -= fx;
-		    j_forces.delta_F[1] -= fy;
-		    j_forces.delta_F[2] -= fz;
+			// relative translational velocity
+			const double vr1 = scdata.v_i[0] - scdata.v_j[0];
+			const double vr2 = scdata.v_i[1] - scdata.v_j[1];
+			const double vr3 = scdata.v_i[2] - scdata.v_j[2];
+			const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+			
+			double F_lubrication = 0;
+
+			if (d <= maxSeparationDistRatio*radsum && lubrication_)
+					F_lubrication = -6*M_PI*mu*vn*rEff*rEff/d;
+					
+			double Fvdw = 0, Fh = 0;
+			double H = r - radsum;
+			H = std::max(XDLVOCutOff,H);
+
+			// hydrophobic force
+			if ( hydrophobic_) Fh = -rEff*K*exp(-H/lamda);
+					
+			// van-der walls force
+			if (vdw_) Fvdw = A*rEff/(6*H*H);
+
+			// add extra layer of liquid film
+			double meff;
+
+            if (rhoi > rhoj) 
+			    meff = rmass[i];
+			else 
+				meff = rmass[j];
+      
+			double gamman = 0;
+			double Fn = 0;
+      
+			if (CoR < 0.001)
+				gamman = 2*sqrt(meff*kf);
+			else 
+				gamman = -2*sqrt(meff*kf)*log(CoR) / sqrt(pow(log(CoR),2.)+pow(M_PI,2.)); 
+
+			if (r -radsum <= hf && liquidFilm_)
+				Fn = kf * ( hf - (r -radsum)) - gamman * vn;
+
+			// std::cout << "linear spring force " << Fn << std::endl;
+      
+			//en represent the normal direction vector, en[0] is the x coordinate
+			const double fx = (F_lubrication + Fvdw + Fh + Fn) * enx;       
+			const double fy = (F_lubrication + Fvdw + Fh + Fn) * eny;				 
+			const double fz = (F_lubrication + Fvdw + Fh + Fn) * enz;		
+			
+			scdata.has_force_update = true;
+			
+			if (!scdata.is_wall)
+			{
+				i_forces.delta_F[0] += fx;
+				i_forces.delta_F[1] += fy;
+				i_forces.delta_F[2] += fz;
+          
+				j_forces.delta_F[0] -= fx;
+				j_forces.delta_F[1] -= fy;
+				j_forces.delta_F[2] -= fz;
+			}
+			else
+			{
+				i_forces.delta_F[0] = 0;
+				i_forces.delta_F[1] = 0;
+				i_forces.delta_F[2] = 0;
+
+				j_forces.delta_F[0] = 0;
+				j_forces.delta_F[1] = 0;
+				j_forces.delta_F[2] = 0;
+			}
 		}
 		else
-		{
-            i_forces.delta_F[0] = 0;
-		    i_forces.delta_F[1] = 0;
-		    i_forces.delta_F[2] = 0;
-
-		    j_forces.delta_F[0] = 0;
-		    j_forces.delta_F[1] = 0;
-		    j_forces.delta_F[2] = 0;
+		{ 
+		    if(scdata.contact_flags) *scdata.contact_flags &= ~CONTACT_COHESION_MODEL;
 		}
 	}
 
   private:
 	double **surfaceTension;
 	double **contactAngle;
-    double XDLVOCutOff,A,K,lamda;	
+    double XDLVOCutOff,A,K,lamda,hf,kf,CoR;	
 	double mu, maxSeparationDistRatio;
 	double ** minSeparationDist;
-	bool tangentialReduce_,capillary_,lubrication_,vdw_,hydrophobic_;
+	bool tangentialReduce_,capillary_,lubrication_,vdw_,hydrophobic_,liquidFilm_;
   };
 }
 }

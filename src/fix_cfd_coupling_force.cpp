@@ -62,11 +62,17 @@ using namespace FixConst;
 FixCfdCouplingForce::FixCfdCouplingForce(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg),
 	fix_coupling_(0),
 	fix_dragforce_(0),
+	fix_gradPForce_(0),
+	fix_viscForce_(0),
+	fix_dragOnlyForce_(0),
+	fix_liftForce_(0),
+	fix_interfaceForce_(0),
 	fix_hdtorque_(0),
 	fix_dispersionTime_(0),
 	fix_dispersionVel_(0),
 	fix_UrelOld_(0),
 	use_force_(true),
+	use_individualForce_(false),
 	use_torque_(true),
 	use_dens_(false),
 	use_type_(false),
@@ -96,6 +102,20 @@ FixCfdCouplingForce::FixCfdCouplingForce(LAMMPS *lmp, int narg, char **arg) : Fi
 				use_dens_ = false;
 			else
 				error->fix_error(FLERR,this,"expecting 'yes' or 'no' after 'transfer_density'");
+			iarg++;
+			hasargs = true;
+		}
+		else if(strcmp(arg[iarg],"transfer_individualForce") == 0)
+		{
+			if(narg < iarg+2)
+				error->fix_error(FLERR,this,"not enough arguments for 'transfer_individualForce'");
+			iarg++;
+			if(strcmp(arg[iarg],"yes") == 0)
+				use_individualForce_ = true;
+			else if(strcmp(arg[iarg],"no") == 0)
+				use_individualForce_ = false;
+			else
+				error->fix_error(FLERR,this,"expecting 'yes' or 'no' after 'transfer_individualForce'");
 			iarg++;
 			hasargs = true;
 		}
@@ -249,6 +269,91 @@ void FixCfdCouplingForce::post_create()
 		fix_dragforce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
 	}
 
+  if(!fix_gradPForce_ && use_individualForce_)
+	{
+		const char* fixarg[11];
+		fixarg[0]="gradPForce";
+		fixarg[1]="all";
+		fixarg[2]="property/atom";
+		fixarg[3]="gradPForce";
+		fixarg[4]="vector"; // 1 vector per particle to be registered
+		fixarg[5]="yes";    // restart
+		fixarg[6]="no";     // communicate ghost
+		fixarg[7]="no";     // communicate rev
+		fixarg[8]="0.";
+		fixarg[9]="0.";
+		fixarg[10]="0.";
+		fix_gradPForce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+	}
+
+  if(!fix_viscForce_ && use_individualForce_)
+	{
+		const char* fixarg[11];
+		fixarg[0]="viscForce";
+		fixarg[1]="all";
+		fixarg[2]="property/atom";
+		fixarg[3]="viscForce";
+		fixarg[4]="vector"; // 1 vector per particle to be registered
+		fixarg[5]="yes";    // restart
+		fixarg[6]="no";     // communicate ghost
+		fixarg[7]="no";     // communicate rev
+		fixarg[8]="0.";
+		fixarg[9]="0.";
+		fixarg[10]="0.";
+		fix_viscForce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+	}
+
+  if(!fix_dragOnlyForce_ && use_individualForce_)
+	{
+		const char* fixarg[11];
+		fixarg[0]="dragOnlyForce";
+		fixarg[1]="all";
+		fixarg[2]="property/atom";
+		fixarg[3]="dragOnlyForce";
+		fixarg[4]="vector"; // 1 vector per particle to be registered
+		fixarg[5]="yes";    // restart
+		fixarg[6]="no";     // communicate ghost
+		fixarg[7]="no";     // communicate rev
+		fixarg[8]="0.";
+		fixarg[9]="0.";
+		fixarg[10]="0.";
+		fix_dragOnlyForce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+	}
+
+  if(!fix_liftForce_ && use_individualForce_)
+	{
+		const char* fixarg[11];
+		fixarg[0]="liftForce";
+		fixarg[1]="all";
+		fixarg[2]="property/atom";
+		fixarg[3]="liftForce";
+		fixarg[4]="vector"; // 1 vector per particle to be registered
+		fixarg[5]="yes";    // restart
+		fixarg[6]="no";     // communicate ghost
+		fixarg[7]="no";     // communicate rev
+		fixarg[8]="0.";
+		fixarg[9]="0.";
+		fixarg[10]="0.";
+		fix_liftForce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+	}
+
+  if(!fix_interfaceForce_ && use_individualForce_)
+	{
+		const char* fixarg[11];
+		fixarg[0]="interfaceForce";
+		fixarg[1]="all";
+		fixarg[2]="property/atom";
+		fixarg[3]="interfaceForce";
+		fixarg[4]="vector"; // 1 vector per particle to be registered
+		fixarg[5]="yes";    // restart
+		fixarg[6]="no";     // communicate ghost
+		fixarg[7]="no";     // communicate rev
+		fixarg[8]="0.";
+		fixarg[9]="0.";
+		fixarg[10]="0.";
+		fix_interfaceForce_ = modify->add_fix_property_atom(11,const_cast<char**>(fixarg),style);
+	}
+
 	// register hydrodynamic torque
 	if(!fix_hdtorque_ && use_torque_)
 	{
@@ -332,6 +437,13 @@ void FixCfdCouplingForce::post_create()
 void FixCfdCouplingForce::pre_delete(bool unfixflag)
 {
 	if(unfixflag && fix_dragforce_) modify->delete_fix("dragforce");
+	
+	if(unfixflag && fix_gradPForce_) modify->delete_fix("gradPForce");
+  if(unfixflag && fix_viscForce_) modify->delete_fix("viscForce");
+  if(unfixflag && fix_dragOnlyForce_) modify->delete_fix("dragOnlyForce");
+	if(unfixflag && fix_liftForce_) modify->delete_fix("liftForce");
+	if(unfixflag && fix_interfaceForce_) modify->delete_fix("interfaceForce");
+
 	if(unfixflag && fix_hdtorque_) modify->delete_fix("hdtorque");
 }
 
@@ -380,6 +492,13 @@ void FixCfdCouplingForce::init()
 
 	// values to come from OF
 	if(use_force_) fix_coupling_->add_pull_property("dragforce","vector-atom");
+
+  if(use_individualForce_) fix_coupling_->add_pull_property("gradPForce","vector-atom");
+  if(use_individualForce_) fix_coupling_->add_pull_property("viscForce","vector-atom");
+	if(use_individualForce_) fix_coupling_->add_pull_property("dragOnlyForce","vector-atom");
+	if(use_individualForce_) fix_coupling_->add_pull_property("liftForce","vector-atom");
+	if(use_individualForce_) fix_coupling_->add_pull_property("interfaceForce","vector-atom");
+    
 	if(use_torque_) fix_coupling_->add_pull_property("hdtorque","vector-atom");
 
 	if(use_stochastic_)

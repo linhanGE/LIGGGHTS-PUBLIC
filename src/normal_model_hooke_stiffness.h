@@ -192,10 +192,10 @@ namespace ContactModels
       double meff=sidata.meff;
 
       double kn = k_n[itype][jtype];
-	    double kt = k_t[itype][jtype];
-	    double gamman = 0;    // betaeff is negative, gamman should be positive
+	  double kt = k_t[itype][jtype];
+	  double gamman = 0;    // betaeff is negative, gamman should be positive
 
-	    if (fully_damping)
+	  if (fully_damping)
           gamman = 2*sqrt(meff*kn);
       else 
           gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype]; // betaeff is negative, gamman should be positive
