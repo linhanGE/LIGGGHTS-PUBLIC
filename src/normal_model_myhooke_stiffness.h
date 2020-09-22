@@ -75,10 +75,10 @@ namespace ContactModels
       k_n(NULL),
       k_t(NULL),
       betaeff(NULL),
-	    tc(0.),
-	    bubbleID(1.),
+      tc(0.),
+      bubbleID(1.),
       collision_offset_(0),
-	    collisionflag_(false),
+      collisionflag_(false),
       tangential_damping(false),
       fully_damping(false),
       elasticForceOff(false),
@@ -100,16 +100,8 @@ namespace ContactModels
     {
         if (collisionflag_)
         {
-            // collision_offset_ = cmb->get_history_offset("collisionCount");
-			/*if (collision_offset_ == -1)
-            {
-				collision_offset_ = hsetup->add_history_value("collisionCount","0");
-	            hsetup->add_history_value("collisionIndicator", "0");
-                hsetup->add_history_value("impactVelocity", "0");
-                hsetup->add_history_value("collisionIDIndicator", "0");
-			}*/		
             collision_offset_ = hsetup->add_history_value("collisionCount","0");
-	          hsetup->add_history_value("collisionIndicator", "0");
+            hsetup->add_history_value("collisionIndicator", "0");
             hsetup->add_history_value("impactVelocity", "0");
             hsetup->add_history_value("collisionIDIndicator", "0");			
         }
@@ -119,13 +111,13 @@ namespace ContactModels
       registry.registerProperty("k_n", &MODEL_PARAMS::createKn);
       registry.registerProperty("k_t", &MODEL_PARAMS::createKt);
       registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff);
-	    registry.registerProperty("tc", &MODEL_PARAMS::createTcMHS);
+      registry.registerProperty("tc", &MODEL_PARAMS::createTcMHS);
       registry.registerProperty("bubbleID", &MODEL_PARAMS::createBubbleIDMHS);
 
       registry.connect("k_n", k_n,"model myhooke/stiffness");
       registry.connect("k_t", k_t,"model myhooke/stiffness");
       registry.connect("betaeff", betaeff,"model myhooke/stiffness");
-	    registry.connect("tc", tc, "model myhooke/stiffness");
+      registry.connect("tc", tc, "model myhooke/stiffness");
       registry.connect("bubbleID", bubbleID, "model myhooke/stiffness");
 
       // error checks on coarsegraining
@@ -140,18 +132,18 @@ namespace ContactModels
     }
 
 	// effective exponent for stress-strain relationship
-	inline double stressStrainExponent()
+    inline double stressStrainExponent()
     {
       return 1.;
     } 
-	 
+      
     void collisionCompute(SurfacesCloseData &scdata)
     {
         if (collisionflag_)
         {
             double * const collision_time = &scdata.contact_history[collision_offset_];
             
-			      collision_time[0] = 0.0;
+            collision_time[0] = 0.0;
             collision_time[1] = 0.0;
             collision_time[2] = 0.0;
             collision_time[3] = 0.0;
@@ -165,23 +157,23 @@ namespace ContactModels
           *sidata.contact_flags |= CONTACT_NORMAL_MODEL;
                 
       const bool update_history = sidata.computeflag && sidata.shearupdate;
-	  
-	    const int itype = sidata.itype;
+
+      const int itype = sidata.itype;
       const int jtype = sidata.jtype;
       const int i = sidata.i;
       const int j = sidata.j;
 
       double meff=sidata.meff;  // already consider the freeze particle in pair_gran_base.h Line 394
 
-	    double kn = k_n[itype][jtype];
-	    double kt = k_t[itype][jtype];
-	    double gamman = 0;
+      double kn = k_n[itype][jtype];
+      double kt = k_t[itype][jtype];
+      double gamman = 0;
       
-	    if (fully_damping)
+      if (fully_damping)
           gamman = 2*sqrt(meff*kn);
       else 
           gamman = -2*sqrt(meff*kn)*betaeff[itype][jtype]; // betaeff is negative, gamman should be positive
-	  
+
       const double gammat = tangential_damping ? gamman : 0.0;
 
       if(!displayedSettings)
@@ -238,7 +230,6 @@ namespace ContactModels
                   collision_time[1] = 1;
                   collision_time[2] = sidata.vn;
                   if ( atom->tag[i] == int (bubbleID) || atom->tag[j] == int (bubbleID) )
-				  // if ( atom->tag[i] == int (bubbleID))	  
                       collision_time[3] = 1;
                   else 
                       collision_time[3] = 0;
@@ -316,7 +307,7 @@ namespace ContactModels
     double ** betaeff;
     double tc, bubbleID;
     int collision_offset_;
-	  bool collisionflag_;
+    bool collisionflag_;
     bool tangential_damping, fully_damping, elasticForceOff;
     bool limitForce;
     bool displayedSettings;

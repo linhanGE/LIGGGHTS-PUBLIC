@@ -493,8 +493,8 @@ void FixCfdCouplingForce::init()
 	// values to come from OF
 	if(use_force_) fix_coupling_->add_pull_property("dragforce","vector-atom");
 
-  if(use_individualForce_) fix_coupling_->add_pull_property("gradPForce","vector-atom");
-  if(use_individualForce_) fix_coupling_->add_pull_property("viscForce","vector-atom");
+    if(use_individualForce_) fix_coupling_->add_pull_property("gradPForce","vector-atom");
+    if(use_individualForce_) fix_coupling_->add_pull_property("viscForce","vector-atom");
 	if(use_individualForce_) fix_coupling_->add_pull_property("dragOnlyForce","vector-atom");
 	if(use_individualForce_) fix_coupling_->add_pull_property("liftForce","vector-atom");
 	if(use_individualForce_) fix_coupling_->add_pull_property("interfaceForce","vector-atom");
